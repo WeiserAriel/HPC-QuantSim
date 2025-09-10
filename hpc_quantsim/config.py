@@ -11,7 +11,7 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional, Union
 from dataclasses import dataclass, asdict
-from omegaconf import OmegaConf, DictConfig
+# from omegaconf import OmegaConf, DictConfig  # Optional dependency
 
 @dataclass
 class SimulationConfig:
@@ -155,17 +155,26 @@ def load_config(config_path: Union[str, Path]) -> Config:
     else:
         raise ValueError(f"Unsupported configuration format: {suffix}")
     
-    # Use OmegaConf for flexible configuration handling
-    cfg = OmegaConf.create(data)
-    
-    # Convert to structured config
-    return Config(
-        simulation=SimulationConfig(**cfg.get('simulation', {})),
-        hpc=HPCConfig(**cfg.get('hpc', {})),
-        metrics=MetricsConfig(**cfg.get('metrics', {})),
-        visualization=VisualizationConfig(**cfg.get('visualization', {})),
-        deployment=DeploymentConfig(**cfg.get('deployment', {}))
-    )
+    # Simple configuration handling (fallback without OmegaConf)
+    try:
+        from omegaconf import OmegaConf
+        cfg = OmegaConf.create(data)
+        return Config(
+            simulation=SimulationConfig(**cfg.get('simulation', {})),
+            hpc=HPCConfig(**cfg.get('hpc', {})),
+            metrics=MetricsConfig(**cfg.get('metrics', {})),
+            visualization=VisualizationConfig(**cfg.get('visualization', {})),
+            deployment=DeploymentConfig(**cfg.get('deployment', {}))
+        )
+    except ImportError:
+        # Fallback without OmegaConf
+        return Config(
+            simulation=SimulationConfig(**data.get('simulation', {})),
+            hpc=HPCConfig(**data.get('hpc', {})),
+            metrics=MetricsConfig(**data.get('metrics', {})),
+            visualization=VisualizationConfig(**data.get('visualization', {})),
+            deployment=DeploymentConfig(**data.get('deployment', {}))
+        )
 
 def save_config(config: Config, config_path: Union[str, Path]) -> None:
     """Save configuration to file."""
@@ -204,11 +213,25 @@ def create_default_config() -> Config:
 
 def merge_configs(base_config: Config, override_config: dict) -> Config:
     """Merge configuration with overrides."""
-    cfg = OmegaConf.structured(base_config)
-    override_cfg = OmegaConf.create(override_config)
-    merged = OmegaConf.merge(cfg, override_cfg)
-    
-    return OmegaConf.to_object(merged)
+    try:
+        from omegaconf import OmegaConf
+        cfg = OmegaConf.structured(base_config)
+        override_cfg = OmegaConf.create(override_config)
+        merged = OmegaConf.merge(cfg, override_cfg)
+        return OmegaConf.to_object(merged)
+    except ImportError:
+        # Simple fallback merge
+        import copy
+        merged_config = copy.deepcopy(base_config)
+        
+        for section, values in override_config.items():
+            if hasattr(merged_config, section):
+                section_obj = getattr(merged_config, section)
+                for key, value in values.items():
+                    if hasattr(section_obj, key):
+                        setattr(section_obj, key, value)
+        
+        return merged_config
 
 # Environment-based configuration
 def load_config_from_env() -> Dict[str, Any]:
