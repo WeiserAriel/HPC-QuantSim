@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hpc-quantsim
+  labels:
+    name: hpc-quantsim
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    description: "HPC QuantSim high-performance quantitative simulation platform"
+---
+# Resource quotas for the namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: hpc-quantsim-quota
+  namespace: hpc-quantsim
+spec:
+  hard:
+    requests.cpu: "100"
+    requests.memory: "200Gi"
+    requests.nvidia.com/gpu: "10"
+    limits.cpu: "200"
+    limits.memory: "400Gi"
+    limits.nvidia.com/gpu: "10"
+    persistentvolumeclaims: "20"
+    services: "10"
+    services.loadbalancers: "2"
+    services.nodeports: "5"
+---
+# Network policies for security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hpc-quantsim-network-policy
+  namespace: hpc-quantsim
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: hpc-quantsim
+    - podSelector: {}
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 8000  # Dashboard port
+    - protocol: TCP
+      port: 9090  # Metrics port
+  egress:
+  - {}  # Allow all egress traffic

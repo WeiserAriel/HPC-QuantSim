@@ -1,0 +1,256 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hpc-quantsim-dashboard
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hpc-quantsim
+      app.kubernetes.io/component: dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hpc-quantsim
+        app.kubernetes.io/component: dashboard
+        app.kubernetes.io/version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: hpc-quantsim-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      initContainers:
+      - name: init-permissions
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          mkdir -p /app/logs /app/results /app/data
+          chown -R 1001:1001 /app/logs /app/results /app/data
+          chmod -R 755 /app/logs /app/results /app/data
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+        - name: results-volume
+          mountPath: /app/results
+        - name: data-volume
+          mountPath: /app/data
+        securityContext:
+          runAsUser: 0
+      containers:
+      - name: dashboard
+        image: hpc-quantsim:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/app/scripts/entrypoint.sh"]
+        args: ["hpc-quantsim", "dashboard", "--host", "0.0.0.0", "--port", "8000"]
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        env:
+        - name: PYTHONPATH
+          value: "/app"
+        - name: HPC_QUANTSIM_CONFIG
+          value: "/app/config/config.yaml"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: scripts-volume
+          mountPath: /app/scripts
+          readOnly: true
+        - name: logs-volume
+          mountPath: /app/logs
+        - name: results-volume
+          mountPath: /app/results
+        - name: data-volume
+          mountPath: /app/data
+        - name: tmp-volume
+          mountPath: /tmp
+        livenessProbe:
+          httpGet:
+            path: /api/status
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/status
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 2
+        startupProbe:
+          httpGet:
+            path: /api/status
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 10
+      volumes:
+      - name: config-volume
+        configMap:
+          name: hpc-quantsim-config
+          defaultMode: 0644
+      - name: scripts-volume
+        configMap:
+          name: hpc-quantsim-scripts
+          defaultMode: 0755
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: hpc-quantsim-logs-pvc
+      - name: results-volume
+        persistentVolumeClaim:
+          claimName: hpc-quantsim-results-pvc
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: hpc-quantsim-data-pvc
+      - name: tmp-volume
+        emptyDir:
+          sizeLimit: 1Gi
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - dashboard
+              topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 300
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 300
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hpc-quantsim-dashboard-service
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: dashboard
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: dashboard
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hpc-quantsim-dashboard-lb
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: dashboard-lb
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: dashboard
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 8000
+    protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hpc-quantsim-dashboard-ingress
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+spec:
+  tls:
+  - hosts:
+    - quantsim.example.com
+    secretName: hpc-quantsim-tls
+  rules:
+  - host: quantsim.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: hpc-quantsim-dashboard-service
+            port:
+              number: 8000

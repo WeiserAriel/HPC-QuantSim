@@ -1,0 +1,179 @@
+# HPC QuantSim Cluster Deployment Configuration
+# This file defines cluster-specific settings for different deployment targets
+
+# Default cluster configuration
+default:
+  scheduler: "slurm"
+  queue: "gpu"
+  nodes: 4
+  tasks_per_node: 8
+  cpus_per_task: 2
+  memory_per_node: "32G"
+  gpu_per_node: 1
+  walltime: "02:00:00"
+  modules:
+    - "cuda/11.8"
+    - "openmpi/4.1.4"
+    - "python/3.11"
+  environment:
+    CUDA_VISIBLE_DEVICES: "0"
+    OMP_NUM_THREADS: "2"
+    PYTHONPATH: "/opt/hpc-quantsim"
+
+# High-performance computing clusters
+clusters:
+  # Example SLURM cluster configuration
+  summit:
+    scheduler: "slurm"
+    partition: "gpu"
+    account: "quantsim"
+    nodes: 8
+    tasks_per_node: 6
+    cpus_per_task: 7
+    memory_per_node: "256G"
+    gpu_per_node: 6
+    gpu_type: "v100"
+    walltime: "04:00:00"
+    constraint: "v100"
+    modules:
+      - "gcc/9.3.0"
+      - "cuda/11.8"
+      - "spectrum-mpi/10.4.0"
+      - "python/3.11.0"
+    environment:
+      CUDA_VISIBLE_DEVICES: "0,1,2,3,4,5"
+      UCX_NET_DEVICES: "mlx5_0:1"
+      OMPI_MCA_pml: "ucx"
+
+  # Example PBS cluster configuration  
+  frontera:
+    scheduler: "pbs"
+    queue: "rtx"
+    project: "quantsim-research"
+    nodes: 4
+    tasks_per_node: 4
+    cpus_per_task: 14
+    memory_per_node: "128G"
+    gpu_per_node: 4
+    gpu_type: "rtx5000"
+    walltime: "03:00:00"
+    modules:
+      - "intel/19.1.1"
+      - "impi/19.0.9"
+      - "cuda/11.4"
+      - "python3/3.9.7"
+    environment:
+      CUDA_VISIBLE_DEVICES: "0,1,2,3"
+      I_MPI_FABRICS: "shm:ofi"
+
+  # Cloud-based Kubernetes cluster
+  gcp-gke:
+    scheduler: "kubernetes"
+    namespace: "hpc-quantsim"
+    replicas: 4
+    cpu_request: "2000m"
+    cpu_limit: "4000m"
+    memory_request: "8Gi"
+    memory_limit: "16Gi"
+    gpu_request: 1
+    gpu_type: "nvidia-tesla-t4"
+    storage_class: "ssd-persistent"
+    storage_size: "100Gi"
+    node_selector:
+      cloud.google.com/gke-accelerator: "nvidia-tesla-t4"
+
+  # AWS EKS cluster
+  aws-eks:
+    scheduler: "kubernetes"
+    namespace: "quantsim"
+    replicas: 6
+    cpu_request: "1000m"
+    cpu_limit: "2000m"
+    memory_request: "4Gi"
+    memory_limit: "8Gi"
+    gpu_request: 1
+    gpu_type: "nvidia-tesla-v100"
+    storage_class: "gp3"
+    storage_size: "50Gi"
+    node_selector:
+      kubernetes.io/instance-type: "p3.2xlarge"
+
+# Job templates for common simulation patterns
+job_templates:
+  # Small-scale testing
+  test:
+    base_config: "default"
+    overrides:
+      nodes: 1
+      tasks_per_node: 2
+      walltime: "00:30:00"
+      scenarios: 100
+
+  # Medium-scale production runs
+  production:
+    base_config: "default"
+    overrides:
+      nodes: 8
+      tasks_per_node: 8
+      walltime: "06:00:00"
+      scenarios: 10000
+
+  # Large-scale benchmarking
+  benchmark:
+    base_config: "default"
+    overrides:
+      nodes: 16
+      tasks_per_node: 16
+      walltime: "12:00:00"
+      scenarios: 100000
+      enable_profiling: true
+
+# Container registry settings
+container_registry:
+  docker_hub:
+    registry: "docker.io"
+    repository: "quantsim/hpc-quantsim"
+    tags:
+      - "latest"
+      - "v1.0.0"
+      - "gpu-optimized"
+      - "mpi-cluster"
+
+  private_registry:
+    registry: "registry.company.com"
+    repository: "hpc/quantsim"
+    auth_required: true
+
+# Resource monitoring and limits
+resource_limits:
+  max_memory_per_process: "16G"
+  max_cpu_per_process: 8
+  max_gpu_memory: "32G"
+  disk_space_limit: "1T"
+  network_bandwidth_limit: "10Gb/s"
+
+# Fault tolerance settings
+fault_tolerance:
+  max_retries: 3
+  retry_delay: 300  # seconds
+  checkpoint_interval: 1800  # seconds
+  backup_frequency: 3600  # seconds
+  health_check_interval: 60  # seconds
+
+# Performance tuning
+performance:
+  mpi_optimization: true
+  gpu_memory_pool: true
+  cpu_affinity: true
+  numa_aware: true
+  prefetch_data: true
+  compression_enabled: true
+
+# Logging and monitoring
+monitoring:
+  enable_metrics: true
+  metrics_port: 9090
+  log_level: "INFO"
+  log_rotation: true
+  max_log_size: "100M"
+  max_log_files: 10

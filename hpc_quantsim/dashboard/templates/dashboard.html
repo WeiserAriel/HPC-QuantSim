@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card {
+            background-color: #2d2d2d;
+            border: 1px solid #404040;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-bottom: none;
+            color: #fff;
+            font-weight: 600;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-connected { background-color: #28a745; }
+        .status-disconnected { background-color: #dc3545; }
+        .status-running { background-color: #ffc107; }
+        
+        .chart-container {
+            background-color: #2d2d2d;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            height: 400px;
+        }
+        
+        .control-panel {
+            background-color: #2d2d2d;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .progress {
+            background-color: #404040;
+            height: 8px;
+            border-radius: 4px;
+        }
+        
+        .progress-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .log-container {
+            background-color: #1a1a1a;
+            border: 1px solid #404040;
+            border-radius: 8px;
+            height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-timestamp {
+            color: #888;
+            margin-right: 10px;
+        }
+        
+        .log-info { color: #17a2b8; }
+        .log-success { color: #28a745; }
+        .log-warning { color: #ffc107; }
+        .log-error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-chart-line"></i> HPC QuantSim Dashboard
+            </span>
+            <div class="d-flex align-items-center">
+                <span id="connection-status" class="me-3">
+                    <span class="status-indicator status-disconnected"></span>
+                    Disconnected
+                </span>
+                <span id="simulation-status" class="badge bg-secondary">Idle</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Metrics Row -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="total-simulations">0</div>
+                    <div class="metric-label">Total Simulations</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="success-rate">0%</div>
+                    <div class="metric-label">Success Rate</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="mean-pnl">$0</div>
+                    <div class="metric-label">Mean PnL</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="mean-sharpe">0.00</div>
+                    <div class="metric-label">Mean Sharpe</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="row">
+            <div class="col-12">
+                <div class="control-panel">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="mb-3">Simulation Control</h5>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-success" id="start-btn" onclick="startSimulation()">
+                                    <i class="fas fa-play"></i> Start
+                                </button>
+                                <button type="button" class="btn btn-danger" id="stop-btn" onclick="stopSimulation()" disabled>
+                                    <i class="fas fa-stop"></i> Stop
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="refreshData()">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Progress</h6>
+                            <div class="progress mb-2">
+                                <div class="progress-bar" role="progressbar" id="progress-bar" style="width: 0%"></div>
+                            </div>
+                            <small id="progress-text">Ready to start simulation</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-bar"></i> PnL Distribution
+                    </div>
+                    <div class="card-body">
+                        <div id="pnl-chart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line"></i> Performance Timeline
+                    </div>
+                    <div class="card-body">
+                        <div id="timeline-chart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-balance-scale"></i> Strategy Comparison
+                    </div>
+                    <div class="card-body">
+                        <div id="strategy-chart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-terminal"></i> System Log
+                    </div>
+                    <div class="card-body">
+                        <div id="log-container" class="log-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js" crossorigin="anonymous"></script>
+
+    <!-- Dashboard JavaScript -->
+    <script>
+        // WebSocket connection
+        let ws = null;
+        let reconnectInterval = null;
+        
+        // Dashboard state
+        let dashboardData = {
+            totalSimulations: 0,
+            successRate: 0,
+            meanPnL: 0,
+            meanSharpe: 0,
+            isRunning: false,
+            progress: 0
+        };
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+            loadInitialData();
+            setupEventListeners();
+        });
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function(event) {
+                console.log('WebSocket connected');
+                updateConnectionStatus(true);
+                clearInterval(reconnectInterval);
+                
+                // Subscribe to all channels
+                ws.send(JSON.stringify({
+                    type: 'subscribe',
+                    channels: ['metrics', 'simulation', 'results']
+                }));
+            };
+            
+            ws.onmessage = function(event) {
+                const message = JSON.parse(event.data);
+                handleWebSocketMessage(message);
+            };
+            
+            ws.onclose = function(event) {
+                console.log('WebSocket disconnected');
+                updateConnectionStatus(false);
+                // Attempt to reconnect every 5 seconds
+                reconnectInterval = setInterval(connectWebSocket, 5000);
+            };
+            
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                addLogEntry('error', 'WebSocket connection error');
+            };
+        }
+
+        function handleWebSocketMessage(message) {
+            console.log('Received message:', message);
+            
+            switch(message.type) {
+                case 'metrics_update':
+                    updateMetrics(message.data);
+                    break;
+                case 'simulation_progress':
+                    updateProgress(message.data);
+                    break;
+                case 'new_result':
+                    handleNewResult(message.data);
+                    break;
+                case 'simulation_started':
+                    onSimulationStarted();
+                    break;
+                case 'simulation_stopped':
+                    onSimulationStopped();
+                    break;
+                case 'subscribed':
+                    addLogEntry('info', `Subscribed to channels: ${message.channels.join(', ')}`);
+                    break;
+                default:
+                    console.log('Unknown message type:', message.type);
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connection-status');
+            const indicator = statusElement.querySelector('.status-indicator');
+            
+            if (connected) {
+                statusElement.innerHTML = '<span class="status-indicator status-connected"></span>Connected';
+                addLogEntry('success', 'Connected to server');
+            } else {
+                statusElement.innerHTML = '<span class="status-indicator status-disconnected"></span>Disconnected';
+                addLogEntry('warning', 'Disconnected from server');
+            }
+        }
+
+        function updateMetrics(metrics) {
+            // Update metric cards
+            document.getElementById('total-simulations').textContent = metrics.total_simulations || 0;
+            document.getElementById('success-rate').textContent = `${((metrics.success_rate || 0) * 100).toFixed(1)}%`;
+            document.getElementById('mean-pnl').textContent = `$${(metrics.mean_pnl || 0).toLocaleString()}`;
+            document.getElementById('mean-sharpe').textContent = (metrics.mean_sharpe || 0).toFixed(2);
+        }
+
+        function updateProgress(progressData) {
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const progress = progressData.progress || 0;
+            
+            progressBar.style.width = `${progress * 100}%`;
+            progressText.textContent = `${(progress * 100).toFixed(1)}% complete - Scenario ${progressData.current_scenario || 0}/${progressData.total_scenarios || 0}`;
+        }
+
+        function handleNewResult(resultData) {
+            addLogEntry('info', `New result: PnL $${resultData.final_pnl?.toLocaleString() || 0}`);
+            // Refresh charts with new data
+            refreshCharts();
+        }
+
+        function onSimulationStarted() {
+            document.getElementById('simulation-status').textContent = 'Running';
+            document.getElementById('simulation-status').className = 'badge bg-warning';
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('stop-btn').disabled = false;
+            addLogEntry('success', 'Simulation started');
+        }
+
+        function onSimulationStopped() {
+            document.getElementById('simulation-status').textContent = 'Idle';
+            document.getElementById('simulation-status').className = 'badge bg-secondary';
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('stop-btn').disabled = true;
+            addLogEntry('info', 'Simulation stopped');
+        }
+
+        async function loadInitialData() {
+            try {
+                // Load summary metrics
+                const response = await fetch('/api/metrics/summary');
+                const data = await response.json();
+                
+                if (data.pnl_stats) {
+                    updateMetrics({
+                        total_simulations: data.total_simulations,
+                        success_rate: data.success_rate,
+                        mean_pnl: data.pnl_stats.mean,
+                        mean_sharpe: data.sharpe_stats?.mean
+                    });
+                }
+                
+                // Load initial charts
+                await refreshCharts();
+                
+            } catch (error) {
+                console.error('Failed to load initial data:', error);
+                addLogEntry('error', 'Failed to load initial data');
+            }
+        }
+
+        async function refreshCharts() {
+            try {
+                // Load PnL distribution chart
+                const pnlResponse = await fetch('/api/charts/pnl-distribution');
+                const pnlData = await pnlResponse.json();
+                Plotly.newPlot('pnl-chart', pnlData.data, pnlData.layout, {responsive: true});
+                
+                // Load performance timeline
+                const timelineResponse = await fetch('/api/charts/performance-over-time');
+                const timelineData = await timelineResponse.json();
+                Plotly.newPlot('timeline-chart', timelineData.data, timelineData.layout, {responsive: true});
+                
+                // Load strategy comparison
+                const strategyResponse = await fetch('/api/charts/strategy-comparison');
+                const strategyData = await strategyResponse.json();
+                Plotly.newPlot('strategy-chart', strategyData.data, strategyData.layout, {responsive: true});
+                
+            } catch (error) {
+                console.error('Failed to refresh charts:', error);
+                addLogEntry('error', 'Failed to refresh charts');
+            }
+        }
+
+        async function startSimulation() {
+            try {
+                const response = await fetch('/api/simulation/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        num_simulations: 100,
+                        strategy: 'MovingAverage'
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.error) {
+                    addLogEntry('error', `Failed to start simulation: ${result.error}`);
+                } else {
+                    addLogEntry('info', 'Simulation start requested');
+                }
+                
+            } catch (error) {
+                console.error('Failed to start simulation:', error);
+                addLogEntry('error', 'Failed to start simulation');
+            }
+        }
+
+        async function stopSimulation() {
+            try {
+                const response = await fetch('/api/simulation/stop', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (result.error) {
+                    addLogEntry('error', `Failed to stop simulation: ${result.error}`);
+                } else {
+                    addLogEntry('info', 'Simulation stop requested');
+                }
+                
+            } catch (error) {
+                console.error('Failed to stop simulation:', error);
+                addLogEntry('error', 'Failed to stop simulation');
+            }
+        }
+
+        function refreshData() {
+            loadInitialData();
+            addLogEntry('info', 'Data refreshed');
+        }
+
+        function addLogEntry(level, message) {
+            const logContainer = document.getElementById('log-container');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${level}`;
+            logEntry.innerHTML = `<span class="log-timestamp">${timestamp}</span>${message}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // Keep only last 100 entries
+            while (logContainer.children.length > 100) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        }
+
+        function setupEventListeners() {
+            // Responsive chart resizing
+            window.addEventListener('resize', function() {
+                Plotly.Plots.resize('pnl-chart');
+                Plotly.Plots.resize('timeline-chart');
+                Plotly.Plots.resize('strategy-chart');
+            });
+        }
+    </script>
+</body>
+</html>
+

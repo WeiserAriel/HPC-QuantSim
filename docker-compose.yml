@@ -1,0 +1,229 @@
+version: '3.8'
+
+services:
+  # Main HPC QuantSim dashboard service
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: hpc-quantsim-dashboard
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data:ro
+      - ./config:/app/config:ro
+      - ./results:/app/results
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - HPC_QUANTSIM_CONFIG=/app/config/config.yaml
+      - LOG_LEVEL=INFO
+    networks:
+      - quantsim-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # GPU-accelerated simulation worker
+  gpu-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: gpu-optimized
+    container_name: hpc-quantsim-gpu-worker
+    command: ["hpc-quantsim", "run", "--gpu", "--scenarios", "1000"]
+    volumes:
+      - ./data:/app/data:ro
+      - ./config:/app/config:ro
+      - ./results:/app/results
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - CUDA_VISIBLE_DEVICES=0
+      - HPC_QUANTSIM_CONFIG=/app/config/config.yaml
+      - LOG_LEVEL=INFO
+    networks:
+      - quantsim-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      - dashboard
+    restart: "no"
+    profiles:
+      - gpu
+
+  # MPI cluster head node
+  mpi-head:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: mpi-cluster
+    container_name: hpc-quantsim-mpi-head
+    command: ["sleep", "infinity"]  # Keep container running for interactive use
+    volumes:
+      - ./data:/app/data:ro
+      - ./config:/app/config:ro
+      - ./results:/app/results
+      - ./logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # For container orchestration
+    environment:
+      - PYTHONPATH=/app
+      - OMPI_MCA_plm_rsh_agent=ssh
+      - OMPI_MCA_btl_vader_single_copy_mechanism=none
+      - HPC_QUANTSIM_CONFIG=/app/config/config.yaml
+      - LOG_LEVEL=INFO
+    networks:
+      - quantsim-network
+    depends_on:
+      - dashboard
+    restart: unless-stopped
+    profiles:
+      - mpi
+
+  # MPI worker nodes (scale with --scale mpi-worker=N)
+  mpi-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: mpi-cluster
+    command: ["sleep", "infinity"]
+    volumes:
+      - ./data:/app/data:ro
+      - ./config:/app/config:ro
+      - ./results:/app/results
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - OMPI_MCA_plm_rsh_agent=ssh
+      - OMPI_MCA_btl_vader_single_copy_mechanism=none
+      - HPC_QUANTSIM_CONFIG=/app/config/config.yaml
+      - LOG_LEVEL=INFO
+    networks:
+      - quantsim-network
+    depends_on:
+      - mpi-head
+    restart: unless-stopped
+    profiles:
+      - mpi
+
+  # Development environment with live code reloading
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: hpc-quantsim-dev
+    command: ["python", "-m", "uvicorn", "hpc_quantsim.dashboard.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    ports:
+      - "8000:8000"
+      - "8888:8888"  # For Jupyter notebooks
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./results:/app/results
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - HPC_QUANTSIM_CONFIG=/app/config/config.yaml
+      - LOG_LEVEL=DEBUG
+      - DEVELOPMENT=true
+    networks:
+      - quantsim-network
+    restart: unless-stopped
+    profiles:
+      - dev
+
+  # Redis for caching and message queuing
+  redis:
+    image: redis:7-alpine
+    container_name: hpc-quantsim-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - quantsim-network
+    restart: unless-stopped
+    profiles:
+      - cache
+
+  # PostgreSQL for results storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: hpc-quantsim-postgres
+    environment:
+      POSTGRES_DB: quantsim
+      POSTGRES_USER: quantsim
+      POSTGRES_PASSWORD: quantsim_secure_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - quantsim-network
+    restart: unless-stopped
+    profiles:
+      - database
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: hpc-quantsim-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - quantsim-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hpc-quantsim-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=quantsim_admin
+    networks:
+      - quantsim-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+networks:
+  quantsim-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:

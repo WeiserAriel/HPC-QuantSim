@@ -1,0 +1,106 @@
+{
+  "job_templates": {
+    "default": {
+      "job_name": "hpc-quantsim-{timestamp}",
+      "account": "quantsim",
+      "partition": "gpu",
+      "nodes": 4,
+      "ntasks_per_node": 8,
+      "cpus_per_task": 2,
+      "mem": "32G",
+      "gres": "gpu:1",
+      "time": "02:00:00",
+      "output": "quantsim-%j.out",
+      "error": "quantsim-%j.err",
+      "mail_type": ["BEGIN", "END", "FAIL"],
+      "mail_user": "user@example.com"
+    },
+    "gpu_intensive": {
+      "job_name": "quantsim-gpu-{timestamp}",
+      "partition": "gpu",
+      "nodes": 2,
+      "ntasks_per_node": 4,
+      "cpus_per_task": 4,
+      "mem": "64G",
+      "gres": "gpu:4",
+      "time": "04:00:00",
+      "constraint": "v100|a100",
+      "exclusive": true
+    },
+    "mpi_cluster": {
+      "job_name": "quantsim-mpi-{timestamp}",
+      "partition": "compute",
+      "nodes": 8,
+      "ntasks_per_node": 16,
+      "cpus_per_task": 1,
+      "mem": "128G",
+      "time": "06:00:00",
+      "network": "infiniband"
+    }
+  },
+  "environment_modules": {
+    "default": [
+      "gcc/9.3.0",
+      "openmpi/4.1.4",
+      "cuda/11.8",
+      "python/3.11"
+    ],
+    "intel": [
+      "intel/2022.1",
+      "intel-mpi/2021.5",
+      "mkl/2022.0",
+      "python/3.11"
+    ]
+  },
+  "environment_variables": {
+    "CUDA_VISIBLE_DEVICES": "0,1,2,3",
+    "OMP_NUM_THREADS": "2",
+    "PYTHONPATH": "/opt/hpc-quantsim:$PYTHONPATH",
+    "UCX_NET_DEVICES": "mlx5_0:1",
+    "OMPI_MCA_pml": "ucx",
+    "OMPI_MCA_btl": "^openib",
+    "NCCL_IB_DISABLE": "0",
+    "NCCL_DEBUG": "INFO"
+  },
+  "script_template": {
+    "shebang": "#!/bin/bash",
+    "directives_prefix": "#SBATCH",
+    "module_load_cmd": "module load",
+    "module_purge_cmd": "module purge",
+    "pre_execution": [
+      "export PYTHONPATH=/opt/hpc-quantsim:$PYTHONPATH",
+      "cd $SLURM_SUBMIT_DIR",
+      "echo \"Job started at $(date)\"",
+      "echo \"Running on nodes: $SLURM_JOB_NODELIST\"",
+      "nvidia-smi"
+    ],
+    "execution_cmd": "mpirun -np $SLURM_NTASKS python -m hpc_quantsim.cli",
+    "post_execution": [
+      "echo \"Job completed at $(date)\"",
+      "echo \"Exit status: $?\""
+    ]
+  },
+  "resource_constraints": {
+    "min_nodes": 1,
+    "max_nodes": 32,
+    "min_memory_per_node": "8G",
+    "max_memory_per_node": "1T",
+    "min_walltime": "00:10:00",
+    "max_walltime": "24:00:00",
+    "supported_gpu_types": ["v100", "a100", "rtx5000", "tesla"],
+    "supported_partitions": ["gpu", "compute", "debug", "bigmem"]
+  },
+  "performance_settings": {
+    "enable_hyperthreading": false,
+    "cpu_frequency": "2.4GHz",
+    "memory_binding": "local",
+    "cpu_binding": "cores",
+    "gpu_compute_mode": "exclusive"
+  },
+  "monitoring": {
+    "enable_profiling": true,
+    "profile_output_dir": "$SCRATCH/quantsim_profiles",
+    "metrics_collection": true,
+    "resource_usage_tracking": true
+  }
+}

@@ -549,5 +549,46 @@ def benchmark(benchmark_gpu, benchmark_mpi):
         click.echo("Use --benchmark-gpu or --benchmark-mpi to run specific benchmarks")
 
 
+@main.command()
+@click.option('--host', default='0.0.0.0', help='Host to bind the dashboard server')
+@click.option('--port', default=8000, type=int, help='Port to bind the dashboard server')
+@click.option('--config', '-c', type=click.Path(exists=True), 
+              help='Configuration file path for simulation engine')
+def dashboard(host, port, config):
+    """Launch the real-time visualization dashboard."""
+    
+    try:
+        from .dashboard.app import run_dashboard
+        from .core.simulation_engine import SimulationEngine
+        from .config import load_config
+    except ImportError as e:
+        click.echo(f"Error importing dashboard components: {e}", err=True)
+        sys.exit(1)
+    
+    click.echo("Starting HPC QuantSim Dashboard...")
+    
+    # Initialize simulation engine if config provided
+    simulation_engine = None
+    if config:
+        try:
+            config_data = load_config(config)
+            simulation_engine = SimulationEngine(config_data)
+            click.echo(f"Loaded simulation configuration from: {config}")
+        except Exception as e:
+            click.echo(f"Warning: Failed to load config: {e}")
+            click.echo("Dashboard will start without simulation engine integration")
+    
+    try:
+        click.echo(f"Dashboard will be available at: http://{host}:{port}")
+        click.echo("Press Ctrl+C to stop the server")
+        run_dashboard(host=host, port=port, simulation_engine=simulation_engine)
+        
+    except KeyboardInterrupt:
+        click.echo("\nShutting down dashboard...")
+    except Exception as e:
+        click.echo(f"Error starting dashboard: {e}", err=True)
+        sys.exit(1)
+
+
 if __name__ == '__main__':
     main()

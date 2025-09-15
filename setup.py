@@ -247,8 +247,8 @@ setup(
         "hpc_quantsim": [
             "deployment/*.yml",
             "deployment/*.json",
-            "visualization/templates/*.html",
-            "visualization/static/*",
+            "dashboard/templates/*.html",
+            "dashboard/static/*",
         ],
     },
     zip_safe=False,

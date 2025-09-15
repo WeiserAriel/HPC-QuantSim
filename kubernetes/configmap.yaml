@@ -1,0 +1,252 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hpc-quantsim-config
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: config
+data:
+  config.yaml: |
+    simulation:
+      num_simulations: 1000
+      max_parallel: 16
+      enable_progress_tracking: true
+      random_seed: 42
+      
+    market:
+      data_format: "parquet"
+      replay_speed: 1.0
+      enable_anomalies: true
+      
+    hpc:
+      use_gpu: true
+      use_mpi: true
+      gpu_batch_size: 128
+      mpi_collective_ops: true
+      
+    metrics:
+      enable_real_time: true
+      collection_frequency: 1.0
+      export_format: "json"
+      
+    dashboard:
+      host: "0.0.0.0"
+      port: 8000
+      auto_refresh: true
+      max_log_entries: 1000
+      chart_theme: "plotly_dark"
+      
+    deployment:
+      scheduler: "kubernetes"
+      cluster_name: "k8s-cluster"
+      
+  logging.yaml: |
+    version: 1
+    disable_existing_loggers: false
+    
+    formatters:
+      default:
+        format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+      detailed:
+        format: '%(asctime)s - %(name)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s'
+        
+    handlers:
+      console:
+        class: logging.StreamHandler
+        level: INFO
+        formatter: default
+        stream: ext://sys.stdout
+        
+      file:
+        class: logging.handlers.RotatingFileHandler
+        level: DEBUG
+        formatter: detailed
+        filename: /app/logs/quantsim.log
+        maxBytes: 10485760  # 10MB
+        backupCount: 5
+        
+    loggers:
+      hpc_quantsim:
+        level: DEBUG
+        handlers: [console, file]
+        propagate: false
+        
+      uvicorn:
+        level: INFO
+        handlers: [console]
+        propagate: false
+        
+    root:
+      level: INFO
+      handlers: [console]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hpc-quantsim-scripts
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: scripts
+data:
+  entrypoint.sh: |
+    #!/bin/bash
+    set -e
+    
+    # Setup environment
+    export PYTHONPATH=/app:$PYTHONPATH
+    export HPC_QUANTSIM_CONFIG=/app/config/config.yaml
+    
+    # Create directories
+    mkdir -p /app/logs /app/results /app/data
+    
+    # Wait for dependencies if needed
+    if [ -n "$WAIT_FOR_SERVICES" ]; then
+        echo "Waiting for dependent services..."
+        for service in $WAIT_FOR_SERVICES; do
+            echo "Waiting for $service..."
+            until nc -z $service 5432 2>/dev/null; do
+                echo "Service $service not ready, waiting..."
+                sleep 5
+            done
+            echo "Service $service is ready!"
+        done
+    fi
+    
+    # Health check function
+    health_check() {
+        python -c "
+        import sys
+        try:
+            import hpc_quantsim
+            from hpc_quantsim.gpu.gpu_utils import GPUUtils
+            from hpc_quantsim.hpc.mpi_collectives import HAS_MPI
+            
+            print(f'HPC QuantSim version: {hpc_quantsim.__version__ if hasattr(hpc_quantsim, \"__version__\") else \"unknown\"}')
+            print(f'GPU available: {GPUUtils.check_gpu_availability()}')
+            print(f'MPI available: {HAS_MPI}')
+            print('Health check passed!')
+        except Exception as e:
+            print(f'Health check failed: {e}')
+            sys.exit(1)
+        "
+    }
+    
+    # Run health check
+    echo "Running health check..."
+    health_check
+    
+    # Execute the main command
+    echo "Starting HPC QuantSim with command: $@"
+    exec "$@"
+    
+  mpi-run.sh: |
+    #!/bin/bash
+    set -e
+    
+    # MPI-specific environment setup
+    export OMPI_ALLOW_RUN_AS_ROOT=1
+    export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+    export OMPI_MCA_btl_vader_single_copy_mechanism=none
+    export OMPI_MCA_btl_base_warn_component_unused=0
+    
+    # Get hostfile from Kubernetes
+    if [ -f "/etc/mpi/hostfile" ]; then
+        export OMPI_MCA_orte_default_hostfile=/etc/mpi/hostfile
+    fi
+    
+    # Calculate number of processes
+    if [ -z "$MPI_PROCESSES" ]; then
+        MPI_PROCESSES=$(nproc)
+    fi
+    
+    echo "Starting MPI job with $MPI_PROCESSES processes"
+    echo "MPI hosts: $(cat /etc/mpi/hostfile 2>/dev/null || echo 'localhost')"
+    
+    # Execute MPI command
+    mpirun -np $MPI_PROCESSES \
+           --allow-run-as-root \
+           --bind-to none \
+           --map-by slot \
+           --mca btl_vader_single_copy_mechanism none \
+           "$@"
+           
+  benchmark.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "Starting HPC QuantSim benchmark..."
+    
+    # System information
+    echo "System Information:"
+    echo "===================="
+    echo "CPU: $(nproc) cores"
+    echo "Memory: $(free -h | grep '^Mem:' | awk '{print $2}')"
+    echo "GPU: $(nvidia-smi -L 2>/dev/null | wc -l || echo '0') GPUs"
+    echo "MPI: $(which mpirun 2>/dev/null && echo 'Available' || echo 'Not available')"
+    echo ""
+    
+    # Run benchmark scenarios
+    scenarios=(100 500 1000 2000)
+    
+    for scenario_count in "${scenarios[@]}"; do
+        echo "Running benchmark with $scenario_count scenarios..."
+        
+        start_time=$(date +%s)
+        
+        python -m hpc_quantsim.cli run \
+            --scenarios $scenario_count \
+            --config /app/config/config.yaml \
+            --output-dir /app/results/benchmark_${scenario_count} \
+            --enable-profiling
+            
+        end_time=$(date +%s)
+        duration=$((end_time - start_time))
+        
+        echo "Completed $scenario_count scenarios in ${duration}s"
+        echo "Performance: $(bc <<< "scale=2; $scenario_count / $duration") scenarios/second"
+        echo ""
+    done
+    
+    echo "Benchmark completed!"
+    
+  gpu-test.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "GPU Test Suite"
+    echo "=============="
+    
+    # Check CUDA availability
+    if command -v nvidia-smi &> /dev/null; then
+        echo "NVIDIA GPU Information:"
+        nvidia-smi --query-gpu=name,memory.total,memory.used,utilization.gpu --format=csv,noheader,nounits
+        echo ""
+    else
+        echo "No NVIDIA GPU detected or nvidia-smi not available"
+        exit 1
+    fi
+    
+    # Test GPU functionality with Python
+    python -c "
+    import sys
+    try:
+        from hpc_quantsim.gpu.gpu_utils import GPUUtils
+        
+        print('GPU Availability Test:')
+        print(f'GPU Available: {GPUUtils.check_gpu_availability()}')
+        
+        if GPUUtils.check_gpu_availability():
+            device_info = GPUUtils.get_device_info()
+            print(f'GPU Device Info: {device_info}')
+        else:
+            print('No GPU available for testing')
+            sys.exit(1)
+            
+    except Exception as e:
+        print(f'GPU test failed: {e}')
+        sys.exit(1)
+    "
+    
+    echo "GPU test completed successfully!"

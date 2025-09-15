@@ -1,0 +1,311 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mpi-hostfile
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: mpi
+data:
+  hostfile: |
+    # MPI hostfile will be generated dynamically
+    # by the init container based on pod IPs
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hpc-quantsim-mpi-worker
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: mpi-worker
+spec:
+  serviceName: hpc-quantsim-mpi-worker-headless
+  replicas: 4
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hpc-quantsim
+      app.kubernetes.io/component: mpi-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hpc-quantsim
+        app.kubernetes.io/component: mpi-worker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      serviceAccountName: hpc-quantsim-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      hostname: mpi-worker-$(POD_INDEX)
+      subdomain: hpc-quantsim-mpi-worker-headless
+      initContainers:
+      - name: mpi-setup
+        image: hpc-quantsim:mpi-cluster
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          set -e
+          echo "Setting up MPI environment for pod $(hostname)"
+          
+          # Create SSH keys for passwordless SSH (if needed)
+          mkdir -p /home/quantsim/.ssh
+          if [ ! -f /home/quantsim/.ssh/id_rsa ]; then
+            ssh-keygen -t rsa -N '' -f /home/quantsim/.ssh/id_rsa
+            cat /home/quantsim/.ssh/id_rsa.pub >> /home/quantsim/.ssh/authorized_keys
+            chmod 600 /home/quantsim/.ssh/authorized_keys
+            chmod 700 /home/quantsim/.ssh
+          fi
+          
+          # Generate hostfile with all worker pods
+          > /tmp/mpi/hostfile
+          for i in $(seq 0 $(($MPI_REPLICAS - 1))); do
+            echo "mpi-worker-$i.hpc-quantsim-mpi-worker-headless.hpc-quantsim.svc.cluster.local slots=8" >> /tmp/mpi/hostfile
+          done
+          
+          echo "Generated MPI hostfile:"
+          cat /tmp/mpi/hostfile
+        env:
+        - name: MPI_REPLICAS
+          value: "4"
+        - name: POD_INDEX
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['statefulset.kubernetes.io/pod-name']
+        volumeMounts:
+        - name: mpi-config
+          mountPath: /tmp/mpi
+        - name: ssh-config
+          mountPath: /home/quantsim/.ssh
+        securityContext:
+          runAsUser: 1001
+      containers:
+      - name: mpi-worker
+        image: hpc-quantsim:mpi-cluster
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          set -e
+          
+          # Setup environment
+          export OMPI_ALLOW_RUN_AS_ROOT=1
+          export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+          export OMPI_MCA_btl_vader_single_copy_mechanism=none
+          export OMPI_MCA_btl_base_warn_component_unused=0
+          export OMPI_MCA_orte_default_hostfile=/etc/mpi/hostfile
+          
+          echo "Starting MPI worker node $(hostname)"
+          echo "Available hosts:"
+          cat /etc/mpi/hostfile || echo "No hostfile found"
+          
+          # Start SSH daemon for MPI communication (if using SSH)
+          # sudo /usr/sbin/sshd -D &
+          
+          # Keep container running and ready for MPI jobs
+          while true; do
+            sleep 30
+            # Health check - ensure MPI is responsive
+            if ! mpirun --version >/dev/null 2>&1; then
+              echo "MPI not responsive, restarting..."
+              exit 1
+            fi
+          done
+        env:
+        - name: OMPI_MCA_plm_rsh_agent
+          value: "ssh"
+        - name: OMPI_MCA_orte_default_hostfile
+          value: "/etc/mpi/hostfile"
+        - name: PYTHONPATH
+          value: "/app"
+        - name: HPC_QUANTSIM_CONFIG
+          value: "/app/config/config.yaml"
+        resources:
+          requests:
+            cpu: 2000m
+            memory: 4Gi
+          limits:
+            cpu: 8000m
+            memory: 16Gi
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: scripts-volume
+          mountPath: /app/scripts
+          readOnly: true
+        - name: mpi-shared-volume
+          mountPath: /shared
+        - name: mpi-config
+          mountPath: /etc/mpi
+        - name: ssh-config
+          mountPath: /home/quantsim/.ssh
+        ports:
+        - name: ssh
+          containerPort: 22
+        - name: mpi
+          containerPort: 2000
+        livenessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - "mpirun --version && ps aux | grep -v grep | grep -q mpi"
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - "test -f /etc/mpi/hostfile && mpirun --version"
+          initialDelaySeconds: 10
+          periodSeconds: 30
+      volumes:
+      - name: config-volume
+        configMap:
+          name: hpc-quantsim-config
+      - name: scripts-volume
+        configMap:
+          name: hpc-quantsim-scripts
+          defaultMode: 0755
+      - name: mpi-shared-volume
+        persistentVolumeClaim:
+          claimName: hpc-quantsim-mpi-shared-pvc
+      - name: mpi-config
+        configMap:
+          name: mpi-hostfile
+      - name: ssh-config
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                - mpi-worker
+            topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-type: compute  # Adjust for your node labels
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hpc-quantsim-mpi-worker-headless
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: mpi-worker
+spec:
+  clusterIP: None  # Headless service for StatefulSet
+  selector:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: mpi-worker
+  ports:
+  - name: ssh
+    port: 22
+    targetPort: 22
+  - name: mpi
+    port: 2000
+    targetPort: 2000
+---
+# MPI Job launcher
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hpc-quantsim-mpi-simulation
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: mpi-job
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 7200  # 2 hours
+  ttlSecondsAfterFinished: 3600  # Clean up after 1 hour
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hpc-quantsim
+        app.kubernetes.io/component: mpi-launcher
+    spec:
+      serviceAccountName: hpc-quantsim-service-account
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      initContainers:
+      - name: wait-for-workers
+        image: busybox:1.35
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          set -e
+          echo "Waiting for MPI worker nodes to be ready..."
+          
+          for i in $(seq 0 3); do
+            echo "Checking mpi-worker-$i..."
+            until nslookup mpi-worker-$i.hpc-quantsim-mpi-worker-headless.hpc-quantsim.svc.cluster.local; do
+              echo "Waiting for mpi-worker-$i to be ready..."
+              sleep 5
+            done
+            echo "mpi-worker-$i is ready!"
+          done
+          
+          echo "All MPI workers are ready!"
+      containers:
+      - name: mpi-launcher
+        image: hpc-quantsim:mpi-cluster
+        command: ["/app/scripts/mpi-run.sh"]
+        args: [
+          "python", "-m", "hpc_quantsim.cli", "run",
+          "--scenarios", "10000",
+          "--mpi",
+          "--config", "/app/config/config.yaml",
+          "--output-dir", "/shared/results/mpi-simulation"
+        ]
+        env:
+        - name: OMPI_MCA_orte_default_hostfile
+          value: "/etc/mpi/hostfile"
+        - name: MPI_PROCESSES
+          value: "32"  # 4 nodes * 8 processes per node
+        - name: PYTHONPATH
+          value: "/app"
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: scripts-volume
+          mountPath: /app/scripts
+          readOnly: true
+        - name: mpi-shared-volume
+          mountPath: /shared
+        - name: mpi-config
+          mountPath: /etc/mpi
+      volumes:
+      - name: config-volume
+        configMap:
+          name: hpc-quantsim-config
+      - name: scripts-volume
+        configMap:
+          name: hpc-quantsim-scripts
+          defaultMode: 0755
+      - name: mpi-shared-volume
+        persistentVolumeClaim:
+          claimName: hpc-quantsim-mpi-shared-pvc
+      - name: mpi-config
+        configMap:
+          name: mpi-hostfile

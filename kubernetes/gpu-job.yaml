@@ -1,0 +1,247 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hpc-quantsim-gpu-simulation
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: gpu-worker
+    job.type: simulation
+    job.profile: gpu-intensive
+spec:
+  parallelism: 4  # Number of parallel pods
+  completions: 4  # Total number of successful completions needed
+  backoffLimit: 3
+  activeDeadlineSeconds: 14400  # 4 hours
+  ttlSecondsAfterFinished: 86400  # Clean up after 24 hours
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hpc-quantsim
+        app.kubernetes.io/component: gpu-worker
+        job.type: simulation
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      serviceAccountName: hpc-quantsim-service-account
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      initContainers:
+      - name: gpu-check
+        image: hpc-quantsim:gpu-optimized
+        command: ["/app/scripts/gpu-test.sh"]
+        resources:
+          requests:
+            nvidia.com/gpu: 1
+          limits:
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: scripts-volume
+          mountPath: /app/scripts
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+      containers:
+      - name: gpu-simulation
+        image: hpc-quantsim:gpu-optimized
+        command: ["/app/scripts/entrypoint.sh"]
+        args: [
+          "hpc-quantsim", "run",
+          "--scenarios", "2000",
+          "--gpu",
+          "--workers", "8",
+          "--config", "/app/config/config.yaml",
+          "--output-dir", "/app/results/gpu-$(POD_NAME)"
+        ]
+        env:
+        - name: PYTHONPATH
+          value: "/app"
+        - name: CUDA_VISIBLE_DEVICES
+          value: "0"
+        - name: CUDA_CACHE_PATH
+          value: "/tmp/cuda-cache"
+        - name: NUMBA_CACHE_DIR
+          value: "/tmp/numba-cache"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: JOB_COMPLETION_INDEX
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['batch.kubernetes.io/job-completion-index']
+        resources:
+          requests:
+            cpu: 4000m
+            memory: 8Gi
+            nvidia.com/gpu: 1
+          limits:
+            cpu: 8000m
+            memory: 16Gi
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: scripts-volume
+          mountPath: /app/scripts
+          readOnly: true
+        - name: results-volume
+          mountPath: /app/results
+        - name: data-volume
+          mountPath: /app/data
+          readOnly: true
+        - name: gpu-cache-volume
+          mountPath: /tmp/cuda-cache
+        - name: tmp-volume
+          mountPath: /tmp
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - |
+              import psutil, sys
+              if psutil.cpu_percent(1) < 5:  # If CPU usage is very low, might be stuck
+                  sys.exit(1)
+          initialDelaySeconds: 60
+          periodSeconds: 60
+          timeoutSeconds: 10
+          failureThreshold: 5
+      volumes:
+      - name: config-volume
+        configMap:
+          name: hpc-quantsim-config
+      - name: scripts-volume
+        configMap:
+          name: hpc-quantsim-scripts
+          defaultMode: 0755
+      - name: results-volume
+        persistentVolumeClaim:
+          claimName: hpc-quantsim-results-pvc
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: hpc-quantsim-data-pvc
+      - name: gpu-cache-volume
+        persistentVolumeClaim:
+          claimName: hpc-quantsim-gpu-cache-pvc
+      - name: tmp-volume
+        emptyDir:
+          sizeLimit: 2Gi
+      nodeSelector:
+        accelerator: nvidia-tesla-gpu  # Adjust for your GPU nodes
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values:
+                - p3.2xlarge
+                - p3.8xlarge
+                - g4dn.xlarge
+                - g4dn.2xlarge
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 50
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: job.type
+                  operator: In
+                  values:
+                  - simulation
+              topologyKey: kubernetes.io/hostname
+---
+# CronJob for scheduled simulations
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hpc-quantsim-scheduled-simulation
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: scheduler
+spec:
+  schedule: "0 2 * * *"  # Run daily at 2 AM
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  startingDeadlineSeconds: 300
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 7200  # 2 hours
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: hpc-quantsim
+            app.kubernetes.io/component: scheduled-worker
+            job.type: scheduled-simulation
+        spec:
+          serviceAccountName: hpc-quantsim-service-account
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            fsGroup: 1001
+          containers:
+          - name: scheduled-simulation
+            image: hpc-quantsim:latest
+            command: ["/app/scripts/entrypoint.sh"]
+            args: [
+              "hpc-quantsim", "run",
+              "--scenarios", "5000",
+              "--config", "/app/config/config.yaml",
+              "--output-dir", "/app/results/scheduled-$(date +%Y%m%d)"
+            ]
+            env:
+            - name: PYTHONPATH
+              value: "/app"
+            resources:
+              requests:
+                cpu: 2000m
+                memory: 4Gi
+              limits:
+                cpu: 4000m
+                memory: 8Gi
+            volumeMounts:
+            - name: config-volume
+              mountPath: /app/config
+              readOnly: true
+            - name: scripts-volume
+              mountPath: /app/scripts
+              readOnly: true
+            - name: results-volume
+              mountPath: /app/results
+            - name: data-volume
+              mountPath: /app/data
+              readOnly: true
+          volumes:
+          - name: config-volume
+            configMap:
+              name: hpc-quantsim-config
+          - name: scripts-volume
+            configMap:
+              name: hpc-quantsim-scripts
+              defaultMode: 0755
+          - name: results-volume
+            persistentVolumeClaim:
+              claimName: hpc-quantsim-results-pvc
+          - name: data-volume
+            persistentVolumeClaim:
+              claimName: hpc-quantsim-data-pvc

@@ -1,0 +1,114 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Python cache and compiled files
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Test files
+tests/
+test_*
+*_test.py
+pytest_cache/
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Results and temporary files
+results/
+logs/
+tmp/
+temp/
+*.log
+*.tmp
+
+# Large data files (keep structure, exclude data)
+data/*
+!data/.gitkeep
+!data/sample/
+
+# Config files with secrets
+config/secrets.yaml
+config/local.yaml
+*.key
+*.pem
+*.p12
+
+# Docker files (avoid recursive copying)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD files
+.travis.yml
+.github/
+Jenkinsfile
+.gitlab-ci.yml
+
+# Monitoring and deployment configs
+monitoring/
+kubernetes/
+helm/
+
+# Local development
+.env.local
+.env.development
+local_config.yaml
+dev_data/

@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hpc-quantsim-data-pvc
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: storage
+    storage.type: data
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-client  # Change to your storage class
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hpc-quantsim-results-pvc
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: storage
+    storage.type: results
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-client  # Change to your storage class
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hpc-quantsim-logs-pvc
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: storage
+    storage.type: logs
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: fast-ssd  # Use faster storage for logs
+  resources:
+    requests:
+      storage: 10Gi
+---
+# High-performance storage for GPU workloads
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hpc-quantsim-gpu-cache-pvc
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: storage
+    storage.type: gpu-cache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 20Gi
+---
+# Shared temporary storage for MPI jobs
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hpc-quantsim-mpi-shared-pvc
+  namespace: hpc-quantsim
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+    app.kubernetes.io/component: storage
+    storage.type: mpi-shared
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-client
+  resources:
+    requests:
+      storage: 30Gi
+---
+# Storage Class definitions (examples - adjust for your cluster)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-ssd
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+provisioner: kubernetes.io/aws-ebs  # Change to your provisioner
+parameters:
+  type: gp3
+  iopsPerGB: "10"
+  volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-client
+  labels:
+    app.kubernetes.io/name: hpc-quantsim
+provisioner: cluster.local/nfs-client-provisioner  # Change to your NFS provisioner
+parameters:
+  archiveOnDelete: "false"
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
