@@ -349,10 +349,76 @@
                 padding: 20px;
             }
 
-            .architecture-svg {
-                min-height: 400px;
-            }
+        .architecture-svg {
+            min-height: 400px;
         }
+    }
+
+    /* Tooltip Styles */
+    .tooltip {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 14px;
+        max-width: 350px;
+        z-index: 1000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .tooltip.show {
+        opacity: 1;
+    }
+
+    .tooltip h3 {
+        margin: 0 0 8px 0;
+        color: #4a90e2;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .tooltip .tooltip-category {
+        color: #50c878;
+        font-size: 12px;
+        font-weight: bold;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+    }
+
+    .tooltip .tooltip-description {
+        margin-bottom: 10px;
+        line-height: 1.4;
+    }
+
+    .tooltip .tooltip-features {
+        margin-bottom: 8px;
+    }
+
+    .tooltip .tooltip-features strong {
+        color: #ffd93d;
+    }
+
+    .tooltip .tooltip-usage {
+        font-style: italic;
+        color: #cccccc;
+        font-size: 13px;
+    }
+
+    /* Component hover effects */
+    .component-box {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .component-box:hover {
+        filter: brightness(1.2);
+        stroke-width: 2;
+    }
     </style>
 </head>
 <body>
@@ -631,7 +697,11 @@
             <div class="section-header">
                 <h2>🏗️ HPC-X Architecture & Component Relationships</h2>
                 <p>Layered architecture showing how components interact and data flows through the system</p>
+                <p><em>Hover over any component to see detailed information</em></p>
             </div>
+            
+            <!-- Tooltip for hover information -->
+            <div id="tooltip" class="tooltip"></div>
 
             <div class="architecture-diagram">
                 <svg viewBox="0 0 1000 760" class="architecture-svg">
@@ -664,96 +734,128 @@
                     <text x="500" y="85" text-anchor="middle" fill="#ffffff" font-size="18" font-weight="bold">Application Layer</text>
                     
                     <!-- OpenMPI Box -->
-                    <rect x="80" y="100" width="140" height="50" fill="#4a90e2" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="150" y="120" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">OpenMPI</text>
-                    <text x="150" y="135" text-anchor="middle" fill="#ffffff" font-size="9">MPI Implementation</text>
+                    <g class="component-box" data-component="openmpi">
+                        <rect x="80" y="100" width="140" height="50" fill="#4a90e2" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="150" y="120" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">OpenMPI</text>
+                        <text x="150" y="135" text-anchor="middle" fill="#ffffff" font-size="9">MPI Implementation</text>
+                    </g>
 
                     <!-- OpenSHMEM Box -->
-                    <rect x="240" y="100" width="140" height="50" fill="#4a90e2" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="310" y="120" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">OpenSHMEM</text>
-                    <text x="310" y="135" text-anchor="middle" fill="#ffffff" font-size="9">PGAS Interface</text>
+                    <g class="component-box" data-component="openshmem">
+                        <rect x="240" y="100" width="140" height="50" fill="#4a90e2" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="310" y="120" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">OpenSHMEM</text>
+                        <text x="310" y="135" text-anchor="middle" fill="#ffffff" font-size="9">PGAS Interface</text>
+                    </g>
 
                     <!-- HPC QuantSim Box -->
-                    <rect x="400" y="100" width="140" height="50" fill="#4a90e2" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="470" y="120" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">HPC QuantSim</text>
-                    <text x="470" y="135" text-anchor="middle" fill="#ffffff" font-size="9">Trading Apps</text>
+                    <g class="component-box" data-component="hpcquantsim">
+                        <rect x="400" y="100" width="140" height="50" fill="#4a90e2" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="470" y="120" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">HPC QuantSim</text>
+                        <text x="470" y="135" text-anchor="middle" fill="#ffffff" font-size="9">Trading Apps</text>
+                    </g>
 
                     <!-- PMIx Box -->
-                    <rect x="560" y="100" width="140" height="50" fill="#4a90e2" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="630" y="120" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">PMIx</text>
-                    <text x="630" y="135" text-anchor="middle" fill="#ffffff" font-size="9">Process Management</text>
+                    <g class="component-box" data-component="pmix">
+                        <rect x="560" y="100" width="140" height="50" fill="#4a90e2" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="630" y="120" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">PMIx</text>
+                        <text x="630" y="135" text-anchor="middle" fill="#ffffff" font-size="9">Process Management</text>
+                    </g>
 
                     <!-- ClusterKit Box -->
-                    <rect x="720" y="100" width="140" height="50" fill="#4a90e2" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="790" y="120" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">ClusterKit</text>
-                    <text x="790" y="135" text-anchor="middle" fill="#ffffff" font-size="9">Cluster Tools</text>
+                    <g class="component-box" data-component="clusterkit">
+                        <rect x="720" y="100" width="140" height="50" fill="#4a90e2" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="790" y="120" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">ClusterKit</text>
+                        <text x="790" y="135" text-anchor="middle" fill="#ffffff" font-size="9">Cluster Tools</text>
+                    </g>
 
                     <!-- Layer 2: Communication Libraries -->
                     <rect x="50" y="200" width="900" height="100" fill="url(#layerGradient2)" stroke="#50c878" stroke-width="2" rx="10"/>
                     <text x="500" y="235" text-anchor="middle" fill="#ffffff" font-size="18" font-weight="bold">Communication Libraries Layer</text>
                     
                     <!-- NCCL Box -->
-                    <rect x="200" y="250" width="200" height="40" fill="#50c878" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="300" y="265" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="bold">NCCL</text>
-                    <text x="300" y="280" text-anchor="middle" fill="#ffffff" font-size="10">GPU-to-GPU Communication</text>
+                    <g class="component-box" data-component="nccl">
+                        <rect x="200" y="250" width="200" height="40" fill="#50c878" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="300" y="265" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="bold">NCCL</text>
+                        <text x="300" y="280" text-anchor="middle" fill="#ffffff" font-size="10">GPU-to-GPU Communication</text>
+                    </g>
 
                     <!-- XCCL Box -->
-                    <rect x="450" y="250" width="200" height="40" fill="#50c878" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="550" y="265" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="bold">XCCL</text>
-                    <text x="550" y="280" text-anchor="middle" fill="#ffffff" font-size="10">Extended Collectives</text>
+                    <g class="component-box" data-component="xccl">
+                        <rect x="450" y="250" width="200" height="40" fill="#50c878" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="550" y="265" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="bold">XCCL</text>
+                        <text x="550" y="280" text-anchor="middle" fill="#ffffff" font-size="10">Extended Collectives</text>
+                    </g>
 
                     <!-- Layer 3: Collective Operations -->
                     <rect x="50" y="330" width="900" height="120" fill="url(#layerGradient3)" stroke="#ff6b6b" stroke-width="2" rx="10"/>
                     <text x="500" y="365" text-anchor="middle" fill="#ffffff" font-size="18" font-weight="bold">Collective Operations Layer</text>
                     
                     <!-- HCOLL Box -->
-                    <rect x="80" y="380" width="140" height="50" fill="#ff6b6b" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="150" y="400" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">HCOLL</text>
-                    <text x="150" y="415" text-anchor="middle" fill="#ffffff" font-size="9">Hierarchical Colls</text>
+                    <g class="component-box" data-component="hcoll">
+                        <rect x="80" y="380" width="140" height="50" fill="#ff6b6b" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="150" y="400" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">HCOLL</text>
+                        <text x="150" y="415" text-anchor="middle" fill="#ffffff" font-size="9">Hierarchical Colls</text>
+                    </g>
 
                     <!-- UCC Box -->
-                    <rect x="240" y="380" width="140" height="50" fill="#ff6b6b" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="310" y="400" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">UCC</text>
-                    <text x="310" y="415" text-anchor="middle" fill="#ffffff" font-size="9">Unified Collectives</text>
+                    <g class="component-box" data-component="ucc">
+                        <rect x="240" y="380" width="140" height="50" fill="#ff6b6b" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="310" y="400" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">UCC</text>
+                        <text x="310" y="415" text-anchor="middle" fill="#ffffff" font-size="9">Unified Collectives</text>
+                    </g>
 
                     <!-- Sharp Box -->
-                    <rect x="400" y="380" width="140" height="50" fill="#ff6b6b" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="470" y="400" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">Sharp</text>
-                    <text x="470" y="415" text-anchor="middle" fill="#ffffff" font-size="9">Network Accel</text>
+                    <g class="component-box" data-component="sharp">
+                        <rect x="400" y="380" width="140" height="50" fill="#ff6b6b" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="470" y="400" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">Sharp</text>
+                        <text x="470" y="415" text-anchor="middle" fill="#ffffff" font-size="9">Network Accel</text>
+                    </g>
 
                     <!-- FCA Box -->
-                    <rect x="560" y="380" width="140" height="50" fill="#ff6b6b" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="630" y="400" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">FCA</text>
-                    <text x="630" y="415" text-anchor="middle" fill="#ffffff" font-size="9">Fabric Colls</text>
+                    <g class="component-box" data-component="fca">
+                        <rect x="560" y="380" width="140" height="50" fill="#ff6b6b" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="630" y="400" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">FCA</text>
+                        <text x="630" y="415" text-anchor="middle" fill="#ffffff" font-size="9">Fabric Colls</text>
+                    </g>
 
                     <!-- CUDA Box -->
-                    <rect x="720" y="380" width="140" height="50" fill="#ff6b6b" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="790" y="400" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">CUDA</text>
-                    <text x="790" y="415" text-anchor="middle" fill="#ffffff" font-size="9">GPU Kernels</text>
+                    <g class="component-box" data-component="cuda">
+                        <rect x="720" y="380" width="140" height="50" fill="#ff6b6b" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="790" y="400" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">CUDA</text>
+                        <text x="790" y="415" text-anchor="middle" fill="#ffffff" font-size="9">GPU Kernels</text>
+                    </g>
 
                     <!-- Layer 4: Transport Layer -->
                     <rect x="50" y="480" width="900" height="120" fill="url(#layerGradient4)" stroke="#ffd93d" stroke-width="2" rx="10"/>
                     <text x="500" y="515" text-anchor="middle" fill="#ffffff" font-size="18" font-weight="bold">Transport & Communication Layer</text>
                     
                     <!-- UCX Box -->
-                    <rect x="120" y="530" width="140" height="50" fill="#ffd93d" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="190" y="550" text-anchor="middle" fill="#000000" font-size="13" font-weight="bold">UCX</text>
-                    <text x="190" y="565" text-anchor="middle" fill="#000000" font-size="9">Unified Comm</text>
+                    <g class="component-box" data-component="ucx">
+                        <rect x="120" y="530" width="140" height="50" fill="#ffd93d" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="190" y="550" text-anchor="middle" fill="#000000" font-size="13" font-weight="bold">UCX</text>
+                        <text x="190" y="565" text-anchor="middle" fill="#000000" font-size="9">Unified Comm</text>
+                    </g>
 
                     <!-- GPUDirect Box -->
-                    <rect x="280" y="530" width="140" height="50" fill="#ffd93d" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="350" y="550" text-anchor="middle" fill="#000000" font-size="13" font-weight="bold">GPUDirect</text>
-                    <text x="350" y="565" text-anchor="middle" fill="#000000" font-size="9">GPU Memory</text>
+                    <g class="component-box" data-component="gpudirect">
+                        <rect x="280" y="530" width="140" height="50" fill="#ffd93d" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="350" y="550" text-anchor="middle" fill="#000000" font-size="13" font-weight="bold">GPUDirect</text>
+                        <text x="350" y="565" text-anchor="middle" fill="#000000" font-size="9">GPU Memory</text>
+                    </g>
 
                     <!-- XPMEM Box -->
-                    <rect x="440" y="530" width="140" height="50" fill="#ffd93d" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="510" y="550" text-anchor="middle" fill="#000000" font-size="13" font-weight="bold">XPMEM</text>
-                    <text x="510" y="565" text-anchor="middle" fill="#000000" font-size="9">Cross Memory</text>
+                    <g class="component-box" data-component="xpmem">
+                        <rect x="440" y="530" width="140" height="50" fill="#ffd93d" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="510" y="550" text-anchor="middle" fill="#000000" font-size="13" font-weight="bold">XPMEM</text>
+                        <text x="510" y="565" text-anchor="middle" fill="#000000" font-size="9">Cross Memory</text>
+                    </g>
 
                     <!-- KNEM Box -->
-                    <rect x="600" y="530" width="140" height="50" fill="#ffd93d" stroke="#ffffff" stroke-width="1" rx="5"/>
-                    <text x="670" y="550" text-anchor="middle" fill="#000000" font-size="13" font-weight="bold">KNEM</text>
-                    <text x="670" y="565" text-anchor="middle" fill="#000000" font-size="9">Kernel Assist</text>
+                    <g class="component-box" data-component="knem">
+                        <rect x="600" y="530" width="140" height="50" fill="#ffd93d" stroke="#ffffff" stroke-width="1" rx="5"/>
+                        <text x="670" y="550" text-anchor="middle" fill="#000000" font-size="13" font-weight="bold">KNEM</text>
+                        <text x="670" y="565" text-anchor="middle" fill="#000000" font-size="9">Kernel Assist</text>
+                    </g>
 
                     <!-- Layer 5: Hardware Layer -->
                     <rect x="50" y="630" width="900" height="100" fill="url(#layerGradient5)" stroke="#9b59b6" stroke-width="2" rx="10"/>
@@ -859,8 +961,137 @@
     </div>
 
     <script>
-        // Interactive functionality
+        // Component tooltip data
+        const componentData = {
+            'openmpi': {
+                category: 'Application Layer',
+                title: 'OpenMPI',
+                description: 'Open-source Message Passing Interface implementation for distributed parallel computing across multiple nodes and processes.',
+                features: 'Point-to-point communication, collective operations, process management, fault tolerance, and dynamic process spawning.',
+                usage: 'Used for distributing HPC QuantSim simulations across multiple compute nodes in a cluster environment.'
+            },
+            'openshmem': {
+                category: 'Application Layer',
+                title: 'OpenSHMEM',
+                description: 'Partitioned Global Address Space (PGAS) programming interface that provides low-latency, high-bandwidth communication.',
+                features: 'One-sided communication, atomic operations, collective routines, and symmetric memory allocation.',
+                usage: 'Enables efficient data sharing and synchronization between processes in distributed trading simulations.'
+            },
+            'hpcquantsim': {
+                category: 'Application Layer',
+                title: 'HPC QuantSim',
+                description: 'High-Performance Computing Quantitative Simulation platform for large-scale financial market modeling and trading strategy backtesting.',
+                features: 'Multi-strategy execution, real-time market replay, GPU acceleration, distributed computing, and comprehensive analytics.',
+                usage: 'Core application that orchestrates all HPC-X components to deliver high-performance quantitative trading simulations.'
+            },
+            'pmix': {
+                category: 'Application Layer',
+                title: 'PMIx (Process Management Interface)',
+                description: 'Scalable process management interface that provides services for application lifecycle management in HPC environments.',
+                features: 'Process spawning, job control, resource allocation, fault notification, and runtime coordination.',
+                usage: 'Manages the lifecycle of distributed simulation processes and coordinates resource allocation across the cluster.'
+            },
+            'clusterkit': {
+                category: 'Application Layer',
+                title: 'ClusterKit',
+                description: 'Comprehensive cluster management and monitoring toolkit for HPC environments, providing system administration capabilities.',
+                features: 'Node monitoring, resource management, job scheduling integration, health checking, and performance monitoring.',
+                usage: 'Provides cluster-wide monitoring and management capabilities for the HPC QuantSim deployment infrastructure.'
+            },
+            'nccl': {
+                category: 'Communication Libraries',
+                title: 'NCCL (NVIDIA Collective Communications Library)',
+                description: 'Optimized library for multi-GPU and multi-node communication, providing high-performance collective operations.',
+                features: 'All-reduce, broadcast, reduce-scatter, all-gather operations optimized for NVIDIA GPUs and high-speed interconnects.',
+                usage: 'Enables efficient GPU-to-GPU communication for parallel strategy execution and gradient synchronization in ML models.'
+            },
+            'xccl': {
+                category: 'Communication Libraries',
+                title: 'XCCL (Extended Collective Communications Library)',
+                description: 'Extended collective communication library that provides advanced collective operations beyond standard MPI collectives.',
+                features: 'Hierarchical collectives, topology-aware algorithms, adaptive collective selection, and custom reduction operations.',
+                usage: 'Provides specialized collective operations for complex data aggregation patterns in distributed financial simulations.'
+            },
+            'hcoll': {
+                category: 'Collective Operations',
+                title: 'HCOLL (Hierarchical Collectives)',
+                description: 'Hierarchical collective communication library that optimizes collective operations using network topology awareness.',
+                features: 'Topology-aware collectives, hierarchical algorithms, bandwidth optimization, and latency reduction techniques.',
+                usage: 'Optimizes collective operations like all-reduce for aggregating simulation results across multiple compute nodes.'
+            },
+            'ucc': {
+                category: 'Collective Operations',
+                title: 'UCC (Unified Collective Communications)',
+                description: 'Unified framework for collective communication operations that provides a common API for various collective libraries.',
+                features: 'Unified API, multiple backend support, runtime collective selection, and performance optimization.',
+                usage: 'Provides a unified interface for collective operations, automatically selecting the best implementation for each use case.'
+            },
+            'sharp': {
+                category: 'Collective Operations',
+                title: 'Sharp (Scalable Hierarchical Aggregation and Reduction Protocol)',
+                description: 'Network-based collective acceleration that offloads collective operations to the network infrastructure.',
+                features: 'In-network computing, hardware acceleration, bandwidth aggregation, and latency reduction for collectives.',
+                usage: 'Accelerates collective operations by performing computations directly in the network switches, reducing CPU overhead.'
+            },
+            'fca': {
+                category: 'Collective Operations',
+                title: 'FCA (Fabric Collective Acceleration)',
+                description: 'Fabric-based collective acceleration that leverages InfiniBand network capabilities for optimized collective operations.',
+                features: 'InfiniBand offload, hardware multicast, adaptive routing, and congestion control for collective traffic.',
+                usage: 'Provides hardware-accelerated collective operations specifically optimized for InfiniBand fabric infrastructure.'
+            },
+            'cuda': {
+                category: 'Collective Operations',
+                title: 'CUDA (Compute Unified Device Architecture)',
+                description: 'Parallel computing platform and programming model for NVIDIA GPUs, enabling massive parallel processing capabilities.',
+                features: 'Parallel kernel execution, memory management, stream processing, cooperative groups, and unified memory.',
+                usage: 'Accelerates computationally intensive trading calculations like technical indicators, risk metrics, and portfolio optimization.'
+            },
+            'ucx': {
+                category: 'Transport & Communication',
+                title: 'UCX (Unified Communication X)',
+                description: 'High-performance communication framework that provides optimized transport protocols for various network technologies.',
+                features: 'Multi-transport support, zero-copy operations, RDMA capabilities, and adaptive protocol selection.',
+                usage: 'Provides the underlying transport layer for all inter-node communication, optimizing for minimal latency and maximum bandwidth.'
+            },
+            'gpudirect': {
+                category: 'Transport & Communication',
+                title: 'GPUDirect',
+                description: 'Technology that enables direct memory access between GPUs and other devices, bypassing CPU involvement for improved performance.',
+                features: 'Peer-to-peer GPU communication, RDMA from network to GPU memory, and direct storage access.',
+                usage: 'Eliminates CPU bottlenecks in GPU-to-GPU data transfers and enables direct network-to-GPU data streaming for market data.'
+            },
+            'xpmem': {
+                category: 'Transport & Communication',
+                title: 'XPMEM (Cross Memory Attach)',
+                description: 'Linux kernel module that allows processes to map and access memory segments from other processes efficiently.',
+                features: 'Cross-process memory mapping, zero-copy data sharing, and high-bandwidth intra-node communication.',
+                usage: 'Enables efficient data sharing between processes on the same node, reducing memory copies in distributed simulations.'
+            },
+            'knem': {
+                category: 'Transport & Communication',
+                title: 'KNEM (Kernel-Assisted Memory)',
+                description: 'Linux kernel module that provides high-performance intra-node communication through kernel-assisted memory operations.',
+                features: 'Kernel-level memory operations, DMA transfers, and optimized large message handling.',
+                usage: 'Optimizes large data transfers between processes on the same node, particularly for shared market data and results.'
+            }
+        };
+
+        // Tooltip functionality
+        let tooltip = null;
+
         document.addEventListener('DOMContentLoaded', function() {
+            tooltip = document.getElementById('tooltip');
+            
+            // Add hover listeners to SVG component boxes
+            const componentBoxes = document.querySelectorAll('.component-box');
+            componentBoxes.forEach(box => {
+                box.addEventListener('mouseenter', showTooltip);
+                box.addEventListener('mouseleave', hideTooltip);
+                box.addEventListener('mousemove', moveTooltip);
+            });
+
+            // Interactive functionality for component cards
             const componentCards = document.querySelectorAll('.component-card');
             
             componentCards.forEach(card => {
@@ -894,6 +1125,52 @@
                 });
             });
         });
+
+        function showTooltip(event) {
+            const component = event.currentTarget.dataset.component;
+            const data = componentData[component];
+            
+            if (data && tooltip) {
+                tooltip.innerHTML = `
+                    <div class="tooltip-category">${data.category}</div>
+                    <h3>${data.title}</h3>
+                    <div class="tooltip-description">${data.description}</div>
+                    <div class="tooltip-features"><strong>Key Features:</strong> ${data.features}</div>
+                    <div class="tooltip-usage">${data.usage}</div>
+                `;
+                
+                tooltip.classList.add('show');
+                moveTooltip(event);
+            }
+        }
+
+        function hideTooltip() {
+            if (tooltip) {
+                tooltip.classList.remove('show');
+            }
+        }
+
+        function moveTooltip(event) {
+            if (tooltip && tooltip.classList.contains('show')) {
+                const rect = event.currentTarget.getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+                
+                let left = event.clientX + 15;
+                let top = event.clientY - 15;
+                
+                // Adjust position if tooltip would go off screen
+                if (left + tooltipRect.width > window.innerWidth) {
+                    left = event.clientX - tooltipRect.width - 15;
+                }
+                
+                if (top + tooltipRect.height > window.innerHeight) {
+                    top = event.clientY - tooltipRect.height - 15;
+                }
+                
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+            }
+        }
 
         function highlightRelatedComponents(component) {
             const relationships = {
