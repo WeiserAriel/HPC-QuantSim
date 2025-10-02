@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HPC-X Components & Relationships - Interactive Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .components-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .component-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .component-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .component-card.active {
+            background: rgba(74, 144, 226, 0.3);
+            border-color: #4a90e2;
+            box-shadow: 0 0 20px rgba(74, 144, 226, 0.5);
+        }
+
+        .component-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .component-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 15px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+        }
+
+        .component-title {
+            font-size: 1.4em;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .status-complete {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-partial {
+            background: #f39c12;
+            color: white;
+        }
+
+        .component-description {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        .component-details {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .component-details.show {
+            display: block;
+        }
+
+        .relationships {
+            margin-top: 15px;
+        }
+
+        .relationships h4 {
+            margin-bottom: 10px;
+            color: #4a90e2;
+        }
+
+        .relationship-list {
+            list-style: none;
+        }
+
+        .relationship-list li {
+            padding: 5px 0;
+            opacity: 0.8;
+        }
+
+        .relationship-list li:before {
+            content: "→ ";
+            color: #4a90e2;
+            font-weight: bold;
+        }
+
+        .flow-diagram {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .flow-diagram h2 {
+            margin-bottom: 30px;
+            color: #4a90e2;
+        }
+
+        .flow-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .flow-step {
+            flex: 1;
+            min-width: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .flow-step:not(:last-child):after {
+            content: "→";
+            position: absolute;
+            right: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            color: #4a90e2;
+            font-weight: bold;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .flow-steps {
+                flex-direction: column;
+            }
+
+            .flow-step:not(:last-child):after {
+                content: "↓";
+                right: 50%;
+                top: 100%;
+                transform: translateX(50%);
+            }
+
+            .components-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 HPC-X Components & Relationships</h1>
+            <p>Interactive guide to understanding HPC QuantSim's architecture and component interactions</p>
+        </div>
+
+        <div class="components-grid">
+            <!-- OpenMPI -->
+            <div class="component-card" data-component="openmpi">
+                <div class="status-badge status-complete">✅ Complete</div>
+                <div class="component-header">
+                    <div class="component-icon">🔗</div>
+                    <div class="component-title">OpenMPI</div>
+                </div>
+                <div class="component-description">
+                    Message Passing Interface for distributed parallel computing across multiple nodes.
+                </div>
+                <div class="component-details">
+                    <p><strong>Purpose:</strong> Enables distributed execution of simulations across multiple compute nodes in a cluster.</p>
+                    <p><strong>Implementation:</strong> MPI collectives for data aggregation, process coordination, and result gathering.</p>
+                    <div class="relationships">
+                        <h4>Interacts with:</h4>
+                        <ul class="relationship-list">
+                            <li>UCX for high-performance transport</li>
+                            <li>HCOLL for optimized collective operations</li>
+                            <li>UCC for unified collective communication</li>
+                            <li>Simulation Engine for distributed execution</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UCX -->
+            <div class="component-card" data-component="ucx">
+                <div class="status-badge status-partial">🔶 Partial</div>
+                <div class="component-header">
+                    <div class="component-icon">⚡</div>
+                    <div class="component-title">UCX</div>
+                </div>
+                <div class="component-description">
+                    Unified Communication X - High-performance transport layer for low-latency communication.
+                </div>
+                <div class="component-details">
+                    <p><strong>Purpose:</strong> Provides optimized transport protocols (InfiniBand, Ethernet) for minimal communication overhead.</p>
+                    <p><strong>Implementation:</strong> Transport layer integration for MPI communications and GPU-to-GPU transfers.</p>
+                    <div class="relationships">
+                        <h4>Interacts with:</h4>
+                        <ul class="relationship-list">
+                            <li>OpenMPI as transport backend</li>
+                            <li>NCCL for GPU communications</li>
+                            <li>GPUDirect for direct GPU memory access</li>
+                            <li>Network hardware (InfiniBand/Ethernet)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NCCL -->
+            <div class="component-card" data-component="nccl">
+                <div class="status-badge status-complete">✅ Complete</div>
+                <div class="component-header">
+                    <div class="component-icon">🎮</div>
+                    <div class="component-title">NCCL</div>
+                </div>
+                <div class="component-description">
+                    NVIDIA Collective Communications Library for multi-GPU communication and synchronization.
+                </div>
+                <div class="component-details">
+                    <p><strong>Purpose:</strong> Enables efficient GPU-to-GPU communication for parallel strategy execution across multiple GPUs.</p>
+                    <p><strong>Implementation:</strong> All-reduce operations for metric aggregation, broadcast for parameter distribution.</p>
+                    <div class="relationships">
+                        <h4>Interacts with:</h4>
+                        <ul class="relationship-list">
+                            <li>CUDA kernels for GPU computation</li>
+                            <li>GPUDirect for memory optimization</li>
+                            <li>UCX for transport layer</li>
+                            <li>GPU Memory Pool for resource management</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CUDA -->
+            <div class="component-card" data-component="cuda">
+                <div class="status-badge status-complete">✅ Complete</div>
+                <div class="component-header">
+                    <div class="component-icon">🔥</div>
+                    <div class="component-title">CUDA</div>
+                </div>
+                <div class="component-description">
+                    Parallel computing platform for GPU-accelerated strategy execution and technical analysis.
+                </div>
+                <div class="component-details">
+                    <p><strong>Purpose:</strong> Accelerates computationally intensive trading strategy calculations using GPU parallel processing.</p>
+                    <p><strong>Implementation:</strong> Custom CUDA kernels for moving averages, RSI, Bollinger Bands, and portfolio calculations.</p>
+                    <div class="relationships">
+                        <h4>Interacts with:</h4>
+                        <ul class="relationship-list">
+                            <li>NCCL for multi-GPU coordination</li>
+                            <li>GPUDirect for memory transfers</li>
+                            <li>Strategy Engine for parallel execution</li>
+                            <li>Memory Pool for GPU resource management</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GPUDirect -->
+            <div class="component-card" data-component="gpudirect">
+                <div class="status-badge status-partial">🔶 Partial</div>
+                <div class="component-header">
+                    <div class="component-icon">💾</div>
+                    <div class="component-title">GPUDirect</div>
+                </div>
+                <div class="component-description">
+                    Direct memory access technology for efficient GPU-to-GPU and GPU-to-network transfers.
+                </div>
+                <div class="component-details">
+                    <p><strong>Purpose:</strong> Eliminates CPU bottlenecks by enabling direct memory transfers between GPUs and network adapters.</p>
+                    <p><strong>Implementation:</strong> Memory transfer optimization for large datasets and real-time market data streaming.</p>
+                    <div class="relationships">
+                        <h4>Interacts with:</h4>
+                        <ul class="relationship-list">
+                            <li>CUDA for GPU memory management</li>
+                            <li>NCCL for collective operations</li>
+                            <li>UCX for network transfers</li>
+                            <li>Market Data Loader for streaming</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sharp -->
+            <div class="component-card" data-component="sharp">
+                <div class="status-badge status-partial">🔶 Partial</div>
+                <div class="component-header">
+                    <div class="component-icon">🌐</div>
+                    <div class="component-title">Sharp</div>
+                </div>
+                <div class="component-description">
+                    Scalable Hierarchical Aggregation and Reduction Protocol for network-accelerated collective operations.
+                </div>
+                <div class="component-details">
+                    <p><strong>Purpose:</strong> Offloads collective communication operations to network switches for improved performance.</p>
+                    <p><strong>Implementation:</strong> Network acceleration for metric aggregation and result collection across cluster nodes.</p>
+                    <div class="relationships">
+                        <h4>Interacts with:</h4>
+                        <ul class="relationship-list">
+                            <li>HCOLL for collective operations</li>
+                            <li>UCX for transport integration</li>
+                            <li>InfiniBand network infrastructure</li>
+                            <li>Metric Aggregator for performance data</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HCOLL -->
+            <div class="component-card" data-component="hcoll">
+                <div class="status-badge status-complete">✅ Complete</div>
+                <div class="component-header">
+                    <div class="component-icon">🔄</div>
+                    <div class="component-title">HCOLL</div>
+                </div>
+                <div class="component-description">
+                    Hierarchical Collectives Library for optimized MPI collective operations.
+                </div>
+                <div class="component-details">
+                    <p><strong>Purpose:</strong> Provides highly optimized algorithms for MPI collective operations like AllReduce and Broadcast.</p>
+                    <p><strong>Implementation:</strong> Custom reduction operations for financial metrics aggregation across distributed simulations.</p>
+                    <div class="relationships">
+                        <h4>Interacts with:</h4>
+                        <ul class="relationship-list">
+                            <li>OpenMPI for collective operations</li>
+                            <li>Sharp for network acceleration</li>
+                            <li>UCC for unified interface</li>
+                            <li>Simulation Engine for result aggregation</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UCC -->
+            <div class="component-card" data-component="ucc">
+                <div class="status-badge status-complete">✅ Complete</div>
+                <div class="component-header">
+                    <div class="component-icon">🎯</div>
+                    <div class="component-title">UCC</div>
+                </div>
+                <div class="component-description">
+                    Unified Collective Communications library providing a single API for various collective implementations.
+                </div>
+                <div class="component-details">
+                    <p><strong>Purpose:</strong> Unifies different collective communication libraries under a single interface for optimal performance.</p>
+                    <p><strong>Implementation:</strong> Unified collectives for metric aggregation, parameter broadcasting, and result gathering.</p>
+                    <div class="relationships">
+                        <h4>Interacts with:</h4>
+                        <ul class="relationship-list">
+                            <li>HCOLL for optimized collectives</li>
+                            <li>OpenMPI for MPI operations</li>
+                            <li>NCCL for GPU collectives</li>
+                            <li>Performance Metrics system</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ClusterKit -->
+            <div class="component-card" data-component="clusterkit">
+                <div class="status-badge status-complete">✅ Complete</div>
+                <div class="component-header">
+                    <div class="component-icon">🏗️</div>
+                    <div class="component-title">ClusterKit</div>
+                </div>
+                <div class="component-description">
+                    Deployment and orchestration toolkit for managing HPC cluster resources and job scheduling.
+                </div>
+                <div class="component-details">
+                    <p><strong>Purpose:</strong> Automates deployment, configuration, and management of HPC QuantSim across cluster environments.</p>
+                    <p><strong>Implementation:</strong> SLURM/PBS integration, resource allocation, job submission, and monitoring capabilities.</p>
+                    <div class="relationships">
+                        <h4>Interacts with:</h4>
+                        <ul class="relationship-list">
+                            <li>SLURM/PBS schedulers</li>
+                            <li>Cluster Manager for resource allocation</li>
+                            <li>CLI for job submission</li>
+                            <li>All HPC-X components for orchestration</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-diagram">
+            <h2>🔄 HPC QuantSim Application Flow</h2>
+            <div class="flow-steps">
+                <div class="flow-step">
+                    <h3>1. Data Ingestion</h3>
+                    <p>Market data loaded via GPUDirect-optimized loaders</p>
+                </div>
+                <div class="flow-step">
+                    <h3>2. Strategy Distribution</h3>
+                    <p>OpenMPI + UCC broadcast strategies across nodes</p>
+                </div>
+                <div class="flow-step">
+                    <h3>3. Parallel Execution</h3>
+                    <p>CUDA kernels execute strategies on GPUs with NCCL coordination</p>
+                </div>
+                <div class="flow-step">
+                    <h3>4. Result Aggregation</h3>
+                    <p>HCOLL + Sharp accelerated collective operations</p>
+                </div>
+                <div class="flow-step">
+                    <h3>5. Analysis & Visualization</h3>
+                    <p>Real-time dashboard with WebSocket streaming</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color status-complete"></div>
+                <span>Fully Implemented</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color status-partial"></div>
+                <span>Partially Implemented</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Interactive functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const componentCards = document.querySelectorAll('.component-card');
+            
+            componentCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const details = this.querySelector('.component-details');
+                    const isActive = this.classList.contains('active');
+                    
+                    // Close all other cards
+                    componentCards.forEach(otherCard => {
+                        otherCard.classList.remove('active');
+                        otherCard.querySelector('.component-details').classList.remove('show');
+                    });
+                    
+                    // Toggle current card
+                    if (!isActive) {
+                        this.classList.add('active');
+                        details.classList.add('show');
+                    }
+                });
+            });
+
+            // Highlight related components on hover
+            componentCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    const component = this.dataset.component;
+                    highlightRelatedComponents(component);
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    clearHighlights();
+                });
+            });
+        });
+
+        function highlightRelatedComponents(component) {
+            const relationships = {
+                'openmpi': ['ucx', 'hcoll', 'ucc'],
+                'ucx': ['openmpi', 'nccl', 'gpudirect'],
+                'nccl': ['cuda', 'gpudirect', 'ucx'],
+                'cuda': ['nccl', 'gpudirect'],
+                'gpudirect': ['cuda', 'nccl', 'ucx'],
+                'sharp': ['hcoll', 'ucx'],
+                'hcoll': ['openmpi', 'sharp', 'ucc'],
+                'ucc': ['hcoll', 'openmpi', 'nccl'],
+                'clusterkit': ['openmpi', 'hcoll', 'ucc']
+            };
+
+            const related = relationships[component] || [];
+            related.forEach(relatedComponent => {
+                const relatedCard = document.querySelector(`[data-component="${relatedComponent}"]`);
+                if (relatedCard) {
+                    relatedCard.style.opacity = '0.7';
+                    relatedCard.style.border = '2px solid #4a90e2';
+                }
+            });
+        }
+
+        function clearHighlights() {
+            const cards = document.querySelectorAll('.component-card');
+            cards.forEach(card => {
+                card.style.opacity = '';
+                card.style.border = '';
+            });
+        }
+    </script>
+</body>
+</html>

@@ -43,7 +43,7 @@ class TickData:
     symbol: str
     timestamp: datetime
     tick_type: TickType
-    price: float
+    price: float = 0.0
     volume: float = 0.0
     sequence_number: Optional[int] = None
     exchange: Optional[str] = None
@@ -58,9 +58,9 @@ class TickData:
 @dataclass
 class TradeData(TickData):
     """Trade tick data with execution details."""
-    tick_type: TickType = TickType.TRADE
     trade_id: Optional[str] = None
     buyer_initiated: Optional[bool] = None  # True if buyer initiated
+    tick_type: TickType = TickType.TRADE
     
     def __post_init__(self):
         super().__post_init__()
@@ -72,11 +72,11 @@ class TradeData(TickData):
 @dataclass  
 class QuoteData(TickData):
     """Quote tick data with bid/ask information."""
-    tick_type: TickType = TickType.QUOTE
     bid_price: float = 0.0
     ask_price: float = 0.0
     bid_size: float = 0.0
     ask_size: float = 0.0
+    tick_type: TickType = TickType.QUOTE
     
     def __post_init__(self):
         super().__post_init__()
@@ -88,12 +88,12 @@ class QuoteData(TickData):
 @dataclass
 class DepthData(TickData):
     """Market depth data with multiple price levels."""
-    tick_type: TickType = TickType.DEPTH
-    bid_prices: List[float] = None
-    ask_prices: List[float] = None  
-    bid_sizes: List[float] = None
-    ask_sizes: List[float] = None
+    bid_prices: Optional[List[float]] = None
+    ask_prices: Optional[List[float]] = None  
+    bid_sizes: Optional[List[float]] = None
+    ask_sizes: Optional[List[float]] = None
     levels: int = 10
+    tick_type: TickType = TickType.DEPTH
     
     def __post_init__(self):
         super().__post_init__()

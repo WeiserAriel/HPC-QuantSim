@@ -20,7 +20,11 @@ try:
     HAS_CUDA = True
 except ImportError:
     HAS_CUDA = False
-    cp = None
+    # Create a dummy cp module for type annotations
+    class DummyCuPy:
+        float32 = float
+        ndarray = object
+    cp = DummyCuPy()
 
 from .gpu_memory_pool import get_global_pool, GPUMemoryPool
 from .gpu_utils import GPUTimer, GPUUtils

@@ -57,10 +57,9 @@ async def _run_simulation_background(
         
         # Register default strategies if none exist
         if not simulation_engine.strategies:
-            from ..strategies.moving_average import MovingAverageStrategy
-            from ..strategies.mean_reversion import MeanReversionStrategy
-            simulation_engine.register_strategy("MovingAverage", MovingAverageStrategy({}))
-            simulation_engine.register_strategy("MeanReversion", MeanReversionStrategy({}))
+            from ..core.strategy_interface import MovingAverageStrategy, MeanReversionStrategy
+            simulation_engine.register_strategy(MovingAverageStrategy(), "MovingAverage")
+            simulation_engine.register_strategy(MeanReversionStrategy(), "MeanReversion")
         
         # Run simulation with periodic progress updates
         import concurrent.futures
@@ -73,11 +72,14 @@ async def _run_simulation_background(
                 
                 # Send progress update
                 if simulation_engine.is_running:
+                    progress_info = simulation_engine.get_progress()
                     await websocket_manager.broadcast({
                         "type": "simulation_progress",
                         "simulation_id": simulation_id,
                         "timestamp": datetime.utcnow().isoformat(),
-                        "progress": 0.5,  # Could be calculated based on completed scenarios
+                        "progress": progress_info["progress"],
+                        "completed_tasks": progress_info["completed_tasks"],
+                        "total_tasks": progress_info["total_tasks"],
                         "status": "running"
                     })
                 
@@ -149,6 +151,11 @@ def create_dashboard_app(simulation_engine: Optional[SimulationEngine] = None) -
     
     # Configure templates and static files
     templates = Jinja2Templates(directory="hpc_quantsim/dashboard/templates")
+    
+    # Mount static files
+    from pathlib import Path
+    static_dir = Path(__file__).parent / "static"
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     
     @app.get("/", response_class=HTMLResponse)
     async def dashboard_home(request: Request):

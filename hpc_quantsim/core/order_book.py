@@ -7,7 +7,7 @@ and market microstructure simulation for accurate strategy backtesting.
 
 from enum import Enum
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Any
 import heapq
 import bisect
 from collections import defaultdict, deque

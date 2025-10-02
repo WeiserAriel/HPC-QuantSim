@@ -1,0 +1,16 @@
+simulation:
+  num_simulations: 100
+  max_parallel: 10
+  random_seed: 42
+  symbols: ["SPY", "QQQ", "IWM"]
+  
+hpc:
+  use_gpu: false
+  use_mpi: false
+  gpus_per_node: 1
+  gpu_memory_pool_mb: 2048
+  
+dashboard:
+  host: "0.0.0.0"
+  port: 8000
+  auto_refresh: true

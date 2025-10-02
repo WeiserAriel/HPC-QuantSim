@@ -82,6 +82,11 @@ class SimulationEngine:
         self.current_scenarios: List[SimulationScenario] = []
         self.results: List[SimulationResult] = []
         
+        # Progress tracking
+        self.total_tasks = 0
+        self.completed_tasks = 0
+        self.current_progress = 0.0
+        
         # HPC components (initialized if available)
         self._init_hpc_components()
         
@@ -212,6 +217,11 @@ class SimulationEngine:
         scenarios = self.generate_scenarios()
         self.current_scenarios = scenarios
         
+        # Initialize progress tracking
+        self.total_tasks = len(scenarios) * len(self.strategies)
+        self.completed_tasks = 0
+        self.current_progress = 0.0
+        
         # Initialize metrics aggregator
         from ..metrics import MetricAggregator
         self.metric_aggregator = MetricAggregator()
@@ -228,8 +238,8 @@ class SimulationEngine:
             # GPU batch execution for large scenario counts
             results = self._run_gpu_batch(scenarios)
         else:
-            # Standard multiprocessing
-            results = self._run_multiprocess(scenarios, max_workers)
+            # Standard threading (avoid pickle issues)
+            results = self._run_threaded(scenarios, max_workers)
         
         self.results = results
         execution_time = time.time() - start_time
@@ -240,12 +250,23 @@ class SimulationEngine:
         self.is_running = False
         return results
     
-    def _run_multiprocess(self, scenarios: List[SimulationScenario], 
-                         max_workers: int) -> List[SimulationResult]:
-        """Run scenarios using multiprocessing."""
+    def get_progress(self) -> Dict[str, Any]:
+        """Get current simulation progress."""
+        return {
+            "progress": self.current_progress,
+            "completed_tasks": self.completed_tasks,
+            "total_tasks": self.total_tasks,
+            "is_running": self.is_running
+        }
+    
+    def _run_threaded(self, scenarios: List[SimulationScenario], 
+                     max_workers: int) -> List[SimulationResult]:
+        """Run scenarios using threading (avoids pickle issues)."""
         results = []
+        completed = 0
+        total_tasks = len(scenarios) * len(self.strategies)
         
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all scenario/strategy combinations
             futures = []
             for scenario in scenarios:
@@ -254,19 +275,29 @@ class SimulationEngine:
                         self._run_single_scenario, 
                         scenario, strategy_name, strategy
                     )
-                    futures.append(future)
+                    futures.append((future, scenario.scenario_id, strategy_name))
             
             # Collect results as they complete
-            for future in futures:
+            for future, scenario_id, strategy_name in futures:
                 try:
                     result = future.result(timeout=300)  # 5 minute timeout
                     results.append(result)
+                    completed += 1
+                    
+                    # Update progress tracking
+                    self.completed_tasks = completed
+                    self.current_progress = completed / total_tasks
+                    
+                    # Log progress periodically
+                    if completed % max(1, total_tasks // 10) == 0:
+                        self.logger.info(f"Progress: {self.current_progress:.1%} ({completed}/{total_tasks})")
+                        
                 except Exception as e:
                     self.logger.error(f"Simulation failed: {e}")
                     # Create failed result
                     results.append(SimulationResult(
-                        scenario_id=-1,
-                        strategy_name="unknown",
+                        scenario_id=scenario_id,
+                        strategy_name=strategy_name,
                         execution_time_ms=0,
                         final_pnl=0,
                         sharpe_ratio=0,
@@ -276,6 +307,7 @@ class SimulationEngine:
                         success=False,
                         error_message=str(e)
                     ))
+                    completed += 1
         
         return results
     

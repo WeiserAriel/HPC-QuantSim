@@ -348,6 +348,12 @@
                 case 'simulation_stopped':
                     onSimulationStopped();
                     break;
+                case 'simulation_completed':
+                    onSimulationCompleted(message);
+                    break;
+                case 'simulation_error':
+                    onSimulationError(message);
+                    break;
                 case 'subscribed':
                     addLogEntry('info', `Subscribed to channels: ${message.channels.join(', ')}`);
                     break;
@@ -381,9 +387,16 @@
             const progressBar = document.getElementById('progress-bar');
             const progressText = document.getElementById('progress-text');
             const progress = progressData.progress || 0;
+            const completed = progressData.completed_tasks || 0;
+            const total = progressData.total_tasks || 0;
             
             progressBar.style.width = `${progress * 100}%`;
-            progressText.textContent = `${(progress * 100).toFixed(1)}% complete - Scenario ${progressData.current_scenario || 0}/${progressData.total_scenarios || 0}`;
+            
+            if (total > 0) {
+                progressText.textContent = `${(progress * 100).toFixed(1)}% complete - ${completed}/${total} tasks`;
+            } else {
+                progressText.textContent = `${(progress * 100).toFixed(1)}% complete`;
+            }
         }
 
         function handleNewResult(resultData) {
@@ -406,6 +419,30 @@
             document.getElementById('start-btn').disabled = false;
             document.getElementById('stop-btn').disabled = true;
             addLogEntry('info', 'Simulation stopped');
+        }
+
+        function onSimulationCompleted(message) {
+            document.getElementById('simulation-status').textContent = 'Completed';
+            document.getElementById('simulation-status').className = 'badge bg-success';
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('stop-btn').disabled = true;
+            
+            const resultsCount = message.results_count || 0;
+            const successRate = ((message.success_rate || 0) * 100).toFixed(1);
+            addLogEntry('success', `Simulation completed: ${resultsCount} results, ${successRate}% success rate`);
+            
+            // Refresh charts and metrics
+            refreshCharts();
+        }
+
+        function onSimulationError(message) {
+            document.getElementById('simulation-status').textContent = 'Error';
+            document.getElementById('simulation-status').className = 'badge bg-danger';
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('stop-btn').disabled = true;
+            
+            const errorMsg = message.error || 'Unknown error occurred';
+            addLogEntry('error', `Simulation error: ${errorMsg}`);
         }
 
         async function loadInitialData() {
