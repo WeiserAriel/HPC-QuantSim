@@ -1007,44 +1007,73 @@
 
                     <!-- Relationship Arrows -->
                     <!-- OpenMPI to HCOLL -->
-                    <path d="M 150 150 Q 150 270 150 380" stroke="#4a90e2" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="160" y="270" fill="#4a90e2" font-size="11" font-weight="bold">uses</text>
+                    <path d="M 150 150 Q 150 310 150 420" stroke="#4a90e2" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="160" y="310" fill="#4a90e2" font-size="11" font-weight="bold">uses</text>
 
                     <!-- OpenSHMEM to UCX -->
-                    <path d="M 310 150 Q 250 340 190 530" stroke="#4a90e2" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="250" y="340" fill="#4a90e2" font-size="11" font-weight="bold">uses</text>
+                    <path d="M 310 150 Q 250 380 190 570" stroke="#4a90e2" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="250" y="380" fill="#4a90e2" font-size="11" font-weight="bold">uses</text>
 
                     <!-- NCCL to UCX -->
-                    <path d="M 300 290 Q 245 410 190 530" stroke="#50c878" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="235" y="410" fill="#50c878" font-size="11" font-weight="bold">uses</text>
+                    <path d="M 150 290 Q 170 450 190 570" stroke="#50c878" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="170" y="450" fill="#50c878" font-size="11" font-weight="bold">uses</text>
 
                     <!-- HCOLL to UCX -->
-                    <path d="M 150 430 Q 170 480 190 530" stroke="#ff6b6b" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="160" y="480" fill="#ff6b6b" font-size="11" font-weight="bold">implemented on</text>
+                    <path d="M 150 470 Q 170 520 190 570" stroke="#ff6b6b" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="160" y="520" fill="#ff6b6b" font-size="11" font-weight="bold">implemented on</text>
 
                     <!-- UCC to UCX -->
-                    <path d="M 310 430 Q 250 480 190 530" stroke="#ff6b6b" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="240" y="480" fill="#ff6b6b" font-size="11" font-weight="bold">uses</text>
+                    <path d="M 310 470 Q 250 520 190 570" stroke="#ff6b6b" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="240" y="520" fill="#ff6b6b" font-size="11" font-weight="bold">uses</text>
 
                     <!-- NCCL to CUDA -->
-                    <path d="M 400 290 Q 590 340 790 380" stroke="#50c878" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="590" y="340" fill="#50c878" font-size="11" font-weight="bold">uses</text>
+                    <path d="M 150 290 Q 435 380 790 420" stroke="#50c878" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="435" y="380" fill="#50c878" font-size="11" font-weight="bold">uses</text>
 
                     <!-- CUDA to GPUDirect -->
-                    <path d="M 790 430 Q 570 480 350 530" stroke="#ff6b6b" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="570" y="480" fill="#ff6b6b" font-size="11" font-weight="bold">uses</text>
+                    <path d="M 790 470 Q 570 520 350 570" stroke="#ff6b6b" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="570" y="520" fill="#ff6b6b" font-size="11" font-weight="bold">uses</text>
 
                     <!-- Sharp accelerates UCC -->
-                    <path d="M 470 380 Q 390 370 310 380" stroke="#ff6b6b" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="380" y="370" fill="#ff6b6b" font-size="11" font-weight="bold">accelerates</text>
+                    <path d="M 470 420 Q 390 410 310 420" stroke="#ff6b6b" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="380" y="410" fill="#ff6b6b" font-size="11" font-weight="bold">accelerates</text>
 
                     <!-- FCA to UCX -->
-                    <path d="M 630 430 Q 410 480 190 530" stroke="#ff6b6b" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="410" y="480" fill="#ff6b6b" font-size="11" font-weight="bold">uses</text>
+                    <path d="M 630 470 Q 410 520 190 570" stroke="#ff6b6b" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="410" y="520" fill="#ff6b6b" font-size="11" font-weight="bold">uses</text>
 
                     <!-- XCCL to UCC -->
-                    <path d="M 550 290 Q 430 340 310 380" stroke="#50c878" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
-                    <text x="430" y="340" fill="#50c878" font-size="11" font-weight="bold">extends</text>
+                    <path d="M 310 290 Q 310 380 310 420" stroke="#50c878" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="320" y="380" fill="#50c878" font-size="11" font-weight="bold">extends</text>
+
+                    <!-- New Relationships for Added Components -->
+                    <!-- MPICH to UCX -->
+                    <path d="M 1110 290 Q 650 450 190 570" stroke="#50c878" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="650" y="450" fill="#50c878" font-size="10" font-weight="bold">uses</text>
+
+                    <!-- MVAPICH to Verbs -->
+                    <path d="M 150 330 Q 310 550 470 720" stroke="#50c878" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="310" y="550" fill="#50c878" font-size="10" font-weight="bold">optimized for</text>
+
+                    <!-- OFI to libfabric -->
+                    <path d="M 950 290 Q 710 270 470 250" stroke="#50c878" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="710" y="270" fill="#50c878" font-size="10" font-weight="bold">implements</text>
+
+                    <!-- NVSHMEM to CUDA -->
+                    <path d="M 630 330 Q 710 380 790 420" stroke="#50c878" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="710" y="380" fill="#50c878" font-size="10" font-weight="bold">uses</text>
+
+                    <!-- UCX to Verbs -->
+                    <path d="M 190 620 Q 330 670 470 720" stroke="#ffd93d" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="330" y="670" fill="#ffd93d" font-size="10" font-weight="bold">uses</text>
+
+                    <!-- RoCE to RDMA Core -->
+                    <path d="M 1110 770 Q 775 750 310 720" stroke="#e67e22" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="775" y="750" fill="#e67e22" font-size="10" font-weight="bold">uses</text>
+
+                    <!-- GDRCOPY to GPUDirect -->
+                    <path d="M 830 620 Q 590 595 350 570" stroke="#ffd93d" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="590" y="595" fill="#ffd93d" font-size="10" font-weight="bold">implements</text>
 
                     <!-- Arrow marker definition -->
                     <defs>
@@ -1216,6 +1245,139 @@
                 description: 'Linux kernel module that provides high-performance intra-node communication through kernel-assisted memory operations.',
                 features: 'Kernel-level memory operations, DMA transfers, and optimized large message handling.',
                 usage: 'Optimizes large data transfers between processes on the same node, particularly for shared market data and results.'
+            },
+            'gdrcopy': {
+                category: 'Transport & Communication',
+                title: 'GDRCOPY (GPU Direct RDMA Copy)',
+                description: 'Low-level library that provides efficient copying between GPU memory and system memory using GPU Direct RDMA technology.',
+                features: 'Zero-copy GPU memory access, RDMA-enabled transfers, high-bandwidth GPU-to-host communication, and minimal CPU involvement.',
+                usage: 'Enables efficient data movement between GPU computations and network operations for distributed trading simulations.'
+            },
+            'libfabric': {
+                category: 'Communication Libraries',
+                title: 'libfabric (OpenFabrics Interface)',
+                description: 'High-performance fabric communication library that provides a unified API for various network fabrics and protocols.',
+                features: 'Multi-provider support, fabric abstraction, RDMA capabilities, and scalable endpoint management.',
+                usage: 'Provides fabric-agnostic communication interface, enabling HPC QuantSim to run efficiently across different network infrastructures.'
+            },
+            'gasnet': {
+                category: 'Communication Libraries',
+                title: 'GASNet (Global Address Space Networking)',
+                description: 'High-performance communication library designed for PGAS (Partitioned Global Address Space) programming models.',
+                features: 'One-sided communication, remote memory access, bulk data transfers, and scalable collective operations.',
+                usage: 'Supports PGAS programming models for distributed shared memory access patterns in quantitative simulations.'
+            },
+            'oshmem': {
+                category: 'Communication Libraries',
+                title: 'OSHMEM (OpenMPI SHMEM)',
+                description: 'OpenMPI implementation of the OpenSHMEM specification, providing PGAS programming interface within the OpenMPI ecosystem.',
+                features: 'Symmetric memory allocation, one-sided communication, atomic operations, and collective routines.',
+                usage: 'Integrates SHMEM capabilities with OpenMPI infrastructure for hybrid MPI+SHMEM programming models.'
+            },
+            'ofi': {
+                category: 'Communication Libraries',
+                title: 'OFI (OpenFabrics Interface)',
+                description: 'Extensible framework that provides fabric services through a common API, abstracting various network hardware implementations.',
+                features: 'Provider-based architecture, fabric discovery, endpoint management, and performance optimization.',
+                usage: 'Enables portable high-performance communication across different fabric types including InfiniBand, Ethernet, and proprietary networks.'
+            },
+            'mpich': {
+                category: 'Communication Libraries',
+                title: 'MPICH',
+                description: 'High-performance, widely portable implementation of the Message Passing Interface (MPI) standard for parallel computing.',
+                features: 'Full MPI-3.1 compliance, fault tolerance, dynamic processes, one-sided communication, and hybrid programming support.',
+                usage: 'Provides robust MPI implementation for distributed parallel execution of trading simulations across heterogeneous clusters.'
+            },
+            'mvapich': {
+                category: 'Communication Libraries',
+                title: 'MVAPICH (MPI over InfiniBand)',
+                description: 'High-performance MPI implementation specifically optimized for InfiniBand, RoCE, and other RDMA-enabled networks.',
+                features: 'RDMA optimization, multi-rail support, shared memory optimization, and GPU-aware communication.',
+                usage: 'Delivers maximum performance for MPI applications running over high-speed InfiniBand networks in HPC clusters.'
+            },
+            'intelmpi': {
+                category: 'Communication Libraries',
+                title: 'Intel MPI Library',
+                description: 'Intel optimized MPI implementation designed for high performance on Intel architectures with comprehensive tuning and optimization.',
+                features: 'Intel architecture optimization, fabric auto-detection, process pinning, and integrated profiling tools.',
+                usage: 'Provides optimized MPI performance on Intel-based HPC systems with automatic tuning for maximum efficiency.'
+            },
+            'platformmpi': {
+                category: 'Communication Libraries',
+                title: 'Platform MPI',
+                description: 'Commercial MPI implementation offering enterprise-grade reliability, performance, and support for mission-critical HPC applications.',
+                features: 'Enterprise support, fault tolerance, checkpoint/restart, advanced debugging, and comprehensive monitoring.',
+                usage: 'Provides commercial-grade MPI solution with enterprise support for production quantitative trading environments.'
+            },
+            'nvshmem': {
+                category: 'Communication Libraries',
+                title: 'NVSHMEM (NVIDIA Shared Memory)',
+                description: 'NVIDIA implementation of OpenSHMEM providing GPU-initiated communication and shared memory programming for multi-GPU systems.',
+                features: 'GPU-initiated communication, symmetric memory allocation, GPU-to-GPU direct access, and CUDA integration.',
+                usage: 'Enables efficient multi-GPU programming with shared memory semantics for GPU-accelerated trading algorithms.'
+            },
+            'rccl': {
+                category: 'Communication Libraries',
+                title: 'RCCL (ROCm Collective Communications Library)',
+                description: 'AMD ROCm implementation of collective communication primitives optimized for AMD GPUs and high-performance computing.',
+                features: 'Multi-GPU collectives, topology awareness, bandwidth optimization, and ROCm integration.',
+                usage: 'Provides optimized collective operations for AMD GPU-based systems running distributed trading simulations.'
+            },
+            'oneccl': {
+                category: 'Communication Libraries',
+                title: 'OneCCL (oneAPI Collective Communications Library)',
+                description: 'Intel oneAPI collective communications library providing optimized collective operations for distributed deep learning and HPC workloads.',
+                features: 'CPU and GPU support, topology-aware algorithms, compression techniques, and oneAPI ecosystem integration.',
+                usage: 'Optimizes collective communication patterns in distributed machine learning models used for trading strategy development.'
+            },
+            'mofed': {
+                category: 'Driver & Network Interface',
+                title: 'MOFED/OFED (Mellanox/OpenFabrics Enterprise Distribution)',
+                description: 'Comprehensive software stack providing drivers, libraries, and utilities for InfiniBand and Ethernet network adapters.',
+                features: 'Hardware drivers, RDMA support, network management tools, performance monitoring, and diagnostic utilities.',
+                usage: 'Provides the foundational driver stack enabling high-performance networking capabilities for all upper-layer protocols.'
+            },
+            'rdmacore': {
+                category: 'Driver & Network Interface',
+                title: 'RDMA Core',
+                description: 'Linux kernel infrastructure and userspace libraries providing the foundation for Remote Direct Memory Access (RDMA) operations.',
+                features: 'Kernel RDMA subsystem, userspace libraries, device abstraction, and memory registration management.',
+                usage: 'Provides the core RDMA infrastructure that enables zero-copy, kernel-bypass communication for maximum performance.'
+            },
+            'verbs': {
+                category: 'Driver & Network Interface',
+                title: 'Verbs (InfiniBand/RDMA API)',
+                description: 'Low-level API providing direct access to RDMA-capable network hardware for high-performance, low-latency communication.',
+                features: 'Direct hardware access, queue pair management, memory registration, and completion notification.',
+                usage: 'Enables direct hardware control for ultra-low latency communication required in high-frequency trading applications.'
+            },
+            'tcpip': {
+                category: 'Driver & Network Interface',
+                title: 'TCP/IP Stack',
+                description: 'Standard internet protocol suite providing reliable, connection-oriented communication over IP networks.',
+                features: 'Reliable delivery, flow control, congestion control, and universal connectivity.',
+                usage: 'Provides standard network connectivity for management traffic, external data feeds, and client connections.'
+            },
+            'udp': {
+                category: 'Driver & Network Interface',
+                title: 'UDP (User Datagram Protocol)',
+                description: 'Connectionless, lightweight transport protocol providing low-latency communication without delivery guarantees.',
+                features: 'Low overhead, minimal latency, broadcast/multicast support, and simple packet-based communication.',
+                usage: 'Used for low-latency market data feeds and time-sensitive notifications where speed is prioritized over reliability.'
+            },
+            'rdmacm': {
+                category: 'Driver & Network Interface',
+                title: 'RDMA-CM (RDMA Connection Manager)',
+                description: 'Protocol and library for establishing and managing RDMA connections, simplifying RDMA application development.',
+                features: 'Connection establishment, address resolution, event handling, and connection lifecycle management.',
+                usage: 'Simplifies RDMA connection setup and management for distributed components of the trading simulation system.'
+            },
+            'roce': {
+                category: 'Driver & Network Interface',
+                title: 'RoCE (RDMA over Converged Ethernet)',
+                description: 'Network protocol enabling RDMA operations over standard Ethernet infrastructure, combining RDMA performance with Ethernet ubiquity.',
+                features: 'RDMA over Ethernet, lossless Ethernet support, priority flow control, and standard Ethernet compatibility.',
+                usage: 'Enables high-performance RDMA communication over existing Ethernet infrastructure, reducing deployment complexity.'
             }
         };
 
